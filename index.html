@@ -1,0 +1,2104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:,">
+<meta name="theme-color" content="#e9e6da">
+<title>Xinyang's World</title>
+<link rel="preload" as="image" href="assets/door.webp">
+<link rel="preload" as="image" href="assets/room.webp">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+
+  /* 本地字体（latin 子集，离线可用）：Cormorant Garamond 做标题，Inter 做正文 */
+  @font-face{
+    font-family:'Cormorant Garamond';
+    src:url('assets/fonts/cormorant-400.woff2') format('woff2');
+    font-weight:400 600;font-style:normal;font-display:swap;
+  }
+  @font-face{
+    font-family:'Cormorant Garamond';
+    src:url('assets/fonts/cormorant-400-italic.woff2') format('woff2');
+    font-weight:400 500;font-style:italic;font-display:swap;
+  }
+  @font-face{
+    font-family:'Inter';
+    src:url('assets/fonts/inter-400.woff2') format('woff2');
+    font-weight:400 600;font-style:normal;font-display:swap;
+  }
+
+  html,body{
+    height:100%;
+    overflow:hidden;
+    overscroll-behavior:none;
+    background:#e9e6da;
+    font-family:Georgia,'Times New Roman','Songti SC',serif;
+    -webkit-font-smoothing:antialiased;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  .screen{position:fixed;inset:0;overflow:hidden}
+
+  /* 用 16:9 画框完整显示作品，画框外的空白由虚化背景延展填满 */
+  .frame{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    width:min(100vw, calc(100vh * 1672 / 941));
+    height:min(100vh, calc(100vw * 941 / 1672));
+    overflow:hidden;
+    z-index:1;
+    box-shadow:0 0 120px rgba(120,110,90,.18);
+  }
+
+  .backdrop{
+    position:absolute;
+    inset:-8%;
+    z-index:0;
+    overflow:hidden;
+    pointer-events:none;
+    filter:blur(30px) saturate(1.03) brightness(.97);
+    opacity:.95;
+  }
+  .backdrop img{width:100%;height:100%;object-fit:cover}
+
+  .zoom{
+    position:absolute;
+    inset:0;
+    transform-origin:50% 58.5%;
+    will-change:transform,filter;
+  }
+
+  .art{
+    display:block;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    user-select:none;
+    -webkit-user-drag:none;
+    pointer-events:none;
+  }
+
+  /* ---------- 门页 ---------- */
+  #gate{z-index:2;touch-action:none}
+
+  #gate .zoom{
+    transition:transform .6s cubic-bezier(.22,.9,.3,1.2), filter 1.4s ease;
+  }
+  #gate .zoom.tugging{
+    transition:transform .12s linear, filter 1.4s ease;
+  }
+
+  /* 待机时极轻微的呼吸，让画面不是一张死图 */
+  @keyframes idle-drift{
+    from{transform:scale(1)}
+    to{transform:scale(1.012)}
+  }
+  #gate:not(.entering) .zoom.idle{
+    animation:idle-drift 16s ease-in-out infinite alternate;
+  }
+
+  #gate.entering .zoom{
+    transition:transform 1.5s cubic-bezier(.55,.05,.35,1), filter 1.5s ease;
+    filter:brightness(1.32) blur(3px);
+  }
+
+  /* 拉环热区（尺寸按画框宽度百分比，任何屏幕都对齐） */
+  .pull{
+    position:absolute;
+    left:50%;
+    top:58.5%;
+    width:9%;
+    aspect-ratio:1/1;
+    min-width:56px;
+    transform:translate(-50%,-50%);
+    display:grid;
+    place-items:center;
+    background:none;
+    border:0;
+    padding:0;
+    cursor:grab;
+    touch-action:none;
+    outline:none;
+    z-index:6;
+  }
+  .pull.holding{cursor:grabbing}
+
+  /* 进入后让拉环退场，别浮在开门视频上 */
+  .pull.done{opacity:0;pointer-events:none;transition:opacity .25s ease}
+
+  .glow{
+    position:absolute;
+    width:190%;
+    height:190%;
+    border-radius:50%;
+    background:radial-gradient(circle,
+      rgba(255,222,158,.62) 0%,
+      rgba(255,214,140,.26) 34%,
+      rgba(255,206,120,0) 68%);
+    mix-blend-mode:screen;
+    filter:blur(1px);
+    animation:breathe 4s ease-in-out infinite;
+    transition:opacity .5s ease, transform .5s ease;
+    pointer-events:none;
+  }
+  @keyframes breathe{
+    0%,100%{transform:scale(.9);opacity:.55}
+    50%    {transform:scale(1.14);opacity:.95}
+  }
+
+  .pull:hover .glow{animation-play-state:paused;transform:scale(1.16);opacity:.95}
+
+  /* 拉动时：光晕随拉力放大、变暖，像被拉出来的一团光 */
+  .pull.holding .glow{
+    animation:none;
+    transform:scale(calc(1.2 + var(--p,0) * .45));
+    opacity:1;
+    filter:blur(calc(1px + var(--p,0) * 4px));
+    transition:transform .1s linear, opacity .1s linear, filter .1s linear;
+  }
+
+  /* 悬停/聚焦时才出现的细描边，帮助确认"这里可以拉" */
+  .ring-cue{
+    position:absolute;
+    width:36%;
+    aspect-ratio:1/1;
+    border-radius:50%;
+    border:1px solid rgba(196,150,84,0);
+    transition:border-color .45s ease, transform .45s ease;
+    pointer-events:none;
+  }
+  .pull:hover .ring-cue,
+  .pull:focus-visible .ring-cue{
+    border-color:rgba(196,150,84,.55);
+    transform:scale(1.18);
+  }
+  .pull.holding .ring-cue{
+    border-color:rgba(196,150,84,.85);
+    transform:scale(1.1) scaleY(calc(1.02 + var(--p,0) * .3));
+  }
+
+  .hint{
+    position:absolute;
+    left:50%;
+    top:66%;
+    transform:translateX(-50%);
+    font-size:clamp(10px,1.1vmin,13px);
+    letter-spacing:.42em;
+    color:rgba(92,80,58,.5);
+    white-space:nowrap;
+    opacity:0;
+    transition:opacity 1s ease;
+    pointer-events:none;
+    z-index:5;
+  }
+  .hint.in{opacity:1}
+  .hint.hide{opacity:0}
+
+  /* ---------- 房间页 ---------- */
+  #room{z-index:3;visibility:hidden}
+  #room .zoom{
+    opacity:0;
+    transform:scale(1.08);
+    transition:opacity 1.4s ease, transform 2.2s cubic-bezier(.2,.7,.2,1);
+  }
+  #room.show{visibility:visible}
+  #room.show .zoom{opacity:1;transform:scale(1)}
+
+  .parallax{
+    position:absolute;
+    inset:0;
+    will-change:transform;
+  }
+
+  /* ---------- 房间里的四个气泡热区 ---------- */
+  .bubble{
+    position:absolute;
+    transform:translate(-50%,-50%);
+    padding:0;
+    border:0;
+    border-radius:50%;
+    background:none;
+    cursor:pointer;
+    z-index:5;
+    -webkit-tap-highlight-color:transparent;
+  }
+  /* 只给一团没有边缘的柔光，不做描边，避免和玻璃球打架 */
+  .bubble::before{
+    content:'';
+    position:absolute;
+    inset:-9%;
+    border-radius:50%;
+    background:radial-gradient(closest-side,
+      rgba(255,246,220,.55) 0%,
+      rgba(255,244,214,.18) 52%,
+      rgba(255,244,214,0) 100%);
+    mix-blend-mode:screen;
+    opacity:0;
+    transition:opacity .45s ease, transform .45s ease;
+    pointer-events:none;
+  }
+  .bubble:hover::before,
+  .bubble:focus-visible::before{opacity:1}
+  .bubble:active::before{opacity:1;transform:scale(.97)}
+  .bubble:focus-visible{outline:2px solid rgba(255,248,230,.9);outline-offset:5px}
+
+  /* ---------- 章节页 ---------- */
+  .chapter{
+    position:fixed;
+    inset:0;
+    z-index:60;
+    display:flex;
+    flex-direction:column;
+    background:#f4f0e6;
+    opacity:0;
+    visibility:hidden;
+    transition:opacity .55s ease, visibility 0s linear .55s;
+  }
+  .chapter.open{
+    opacity:1;
+    visibility:visible;
+    transition:opacity .55s ease;
+  }
+  .chapter::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:radial-gradient(circle at 50% 40%, rgba(255,255,255,.7), rgba(255,255,255,0) 64%);
+    pointer-events:none;
+  }
+
+  /* 章节背景图：有配置时才显示 */
+  .chapter-bg{
+    position:absolute;
+    inset:0;
+    overflow:hidden;
+    opacity:0;
+    transform:scale(1.05);
+    transition:opacity .7s ease, transform 1.6s ease;
+    pointer-events:none;
+  }
+  .chapter.open .chapter-bg{transform:scale(1)}
+  .chapter-bg.show{opacity:1}
+  .chapter-bg img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    filter:blur(2.5px) saturate(.88) brightness(1.04);
+  }
+  /* 柔和米白纱，压住画面细节，保证前景图和文字可读 */
+  .chapter-bg::after{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:linear-gradient(180deg,
+      rgba(252,249,242,.66),
+      rgba(252,249,242,.46) 42%,
+      rgba(252,249,242,.70));
+    opacity:var(--veil,1);
+  }
+
+  .chapter-bar{
+    position:relative;
+    z-index:2;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:clamp(16px,4vh,34px) clamp(18px,4vw,52px);
+  }
+  .back{
+    padding:8px 2px;
+    border:0;
+    background:none;
+    cursor:pointer;
+    font:inherit;
+    font-size:clamp(10px,1.35vmin,13px);
+    letter-spacing:.34em;
+    color:rgba(92,85,70,.6);
+    transition:color .3s ease, transform .3s ease;
+  }
+  .back:hover{color:#6d6553;transform:translateX(-3px)}
+  .chapter-index{
+    font-size:clamp(10px,1.35vmin,13px);
+    letter-spacing:.34em;
+    color:rgba(92,85,70,.38);
+  }
+
+  .chapter-head{
+    position:relative;
+    z-index:2;
+    margin:clamp(6px,1.6vh,18px) 0 0;
+    padding:0 clamp(18px,4vw,52px);
+    text-align:center;
+    font-size:clamp(28px,5vmin,56px);
+    font-weight:400;
+    letter-spacing:.14em;
+    color:#524c40;
+  }
+  .chapter-head[hidden]{display:none}
+
+  .chapter-body{
+    position:relative;
+    z-index:2;
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:clamp(8px,2.4vw,36px);
+    padding:0 clamp(8px,3vw,32px);
+  }
+
+  .stage{
+    position:relative;
+    width:min(84vw, 1180px);
+    aspect-ratio:16/9;
+    display:grid;
+    place-items:center;
+    text-align:center;
+  }
+  .chapter.has-head .stage{width:min(80vw, 1100px)}  .stage img{
+    max-width:100%;
+    max-height:100%;
+    width:auto;
+    height:auto;
+    object-fit:contain;
+    display:block;
+    box-shadow:0 24px 80px rgba(90,78,58,.26);
+  }
+
+  /* BARACUTA：顶部透明拼贴 + 下方逐页论文 */
+  .baracuta{
+    position:absolute;inset:0;z-index:1;
+    display:none;
+    overflow-y:auto;overflow-x:hidden;
+    scrollbar-width:none;
+    color:#1b1a17;
+  }
+  .baracuta::-webkit-scrollbar{display:none}
+  .chapter.baracuta-mode .baracuta{display:block}
+  .chapter.baracuta-mode .chapter-head,
+  .chapter.baracuta-mode .chapter-body,
+  .chapter.baracuta-mode .chapter-foot{display:none}
+  /* 滚动时顶部留一条渐隐底，保证 back / 序号始终可读 */
+  .chapter.baracuta-mode .chapter-bar{
+    background:linear-gradient(to bottom, rgba(250,248,242,.94) 42%, rgba(250,248,242,0));
+  }
+
+  .bc-page{padding:clamp(60px,9vh,96px) clamp(18px,4.2vw,56px) clamp(40px,8vh,80px)}
+  .bc-collage{
+    display:block;
+    width:min(92vw, 1400px);
+    margin:0 auto;
+    filter:drop-shadow(0 22px 46px rgba(45,40,32,.38));
+  }
+  .bc-doc{
+    width:min(880px, 86vw);
+    margin:clamp(44px,9vh,96px) auto 0;
+    display:flex;
+    flex-direction:column;
+    gap:clamp(16px,2.2vw,26px);
+  }
+  .bc-doc-head{
+    display:flex;justify-content:space-between;gap:16px;
+    padding-bottom:4px;
+    font-size:clamp(8px,1vw,10px);
+    letter-spacing:.2em;text-transform:uppercase;
+    color:rgba(27,26,23,.5);
+  }
+  .bc-doc img{
+    display:block;width:100%;
+    border-radius:2px;
+    background:#fff;
+    box-shadow:0 18px 46px rgba(70,60,45,.2);
+  }
+  .slide-title{
+    font-size:clamp(30px,6.4vmin,66px);
+    letter-spacing:.16em;
+    color:#5d5646;
+  }
+  .slide-note{
+    margin-top:clamp(12px,2.2vh,22px);
+    font-size:clamp(9px,1.25vmin,12px);
+    letter-spacing:.44em;
+    color:rgba(93,86,70,.42);
+  }
+
+  /* ---------- 拍立得扇形无限滑块 ---------- */
+  .fan-stage{overflow:visible}
+  .fan{
+    position:absolute;
+    inset:0;
+    touch-action:none;
+    cursor:grab;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+  .fan.dragging{cursor:grabbing}
+  .card{
+    position:absolute;
+    left:50%;
+    top:50%;
+    margin:0;
+    width:clamp(320px, min(90vw, 140vh), 1800px);
+    padding:12px 12px 0;
+    background:#fffdf7;
+    box-shadow:0 20px 46px rgba(72,62,48,.28);
+    transform-origin:50% 50%;
+    will-change:transform,opacity;
+    backface-visibility:hidden;
+  }
+  .card img{
+    display:block;
+    width:100%;
+    height:auto;
+    max-width:none;
+    max-height:none;
+    aspect-ratio:16/9;
+    object-fit:cover;
+    background:#f1ece2;
+    box-shadow:none;
+    pointer-events:none;
+    -webkit-user-drag:none;
+    opacity:0;
+    transition:opacity .45s ease;
+  }
+  .card img.loaded{opacity:1}
+  .card img.contain{object-fit:contain}
+  .card figcaption{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:9px 2px 11px;
+    font-size:clamp(6px,.95vmin,9px);
+    letter-spacing:.28em;
+    color:rgba(92,85,70,.5);
+  }
+  .fan-hint{
+    margin-left:16px;
+    font-size:clamp(9px,1.25vmin,12px);
+    letter-spacing:.3em;
+    color:rgba(93,86,70,.34);
+  }
+  .fan-hint[hidden]{display:none}
+
+  .nav{
+    flex:none;
+    position:relative;
+    z-index:700;
+    width:clamp(30px,4.4vmin,46px);
+    aspect-ratio:1;
+    display:grid;
+    place-items:center;
+    border:1px solid rgba(120,108,86,.18);
+    border-radius:50%;
+    background:rgba(255,255,255,.35);
+    color:#7a7160;
+    font-size:clamp(16px,2.4vmin,22px);
+    line-height:1;
+    cursor:pointer;
+    transition:background .3s ease, border-color .3s ease, opacity .3s ease;
+  }
+  .nav:hover{background:rgba(255,255,255,.75);border-color:rgba(120,108,86,.34)}
+  .nav[hidden]{display:none}
+
+  .chapter-foot{
+    position:relative;
+    z-index:2;
+    display:flex;
+    justify-content:center;
+    padding:0 0 clamp(18px,4.4vh,40px);
+    min-height:24px;
+  }
+  .counter{
+    font-size:clamp(9px,1.25vmin,12px);
+    letter-spacing:.4em;
+    color:rgba(93,86,70,.45);
+  }
+  .counter[hidden]{display:none}
+
+  .contact{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:5px;
+  }
+  .contact[hidden]{display:none}
+  .contact-line{
+    font-size:clamp(10px,1.5vmin,14px);
+    letter-spacing:.1em;
+    color:rgba(93,86,70,.74);
+  }
+  .contact-line a{
+    color:inherit;
+    text-decoration:none;
+    border-bottom:1px solid rgba(93,86,70,.3);
+    padding-bottom:1px;
+    transition:color .3s ease, border-color .3s ease;
+  }
+  .contact-line a:hover{
+    color:#3d382e;
+    border-color:rgba(93,86,70,.75);
+  }
+  .contact-sub{
+    font-size:clamp(9px,1.25vmin,12px);
+    letter-spacing:.16em;
+    color:rgba(93,86,70,.46);
+  }
+
+  /* ---------- Myself：全屏首图 → 页面转场 → About 滚动介绍 ---------- */
+  .myself{position:absolute;inset:0;z-index:1;display:none}
+  .chapter.myself-mode .myself{display:block}
+  .chapter.myself-mode .chapter-head,
+  .chapter.myself-mode .chapter-body,
+  .chapter.myself-mode .chapter-foot{display:none}
+
+  /* 悬浮的首图：left/top/width/height 全部由滚动进度驱动 */
+  .ms-float{
+    position:absolute;
+    left:0;top:0;width:100%;height:100%;
+    z-index:1;
+    padding:calc(var(--p,0) * 4px);
+    background:#fffdf9;
+    border-radius:calc(var(--p,0) * 12px);
+    box-shadow:0 calc(var(--p,0) * 12px) calc(var(--p,0) * 30px) rgba(198,136,164,.34);
+    pointer-events:none;
+    will-change:left,top,width,height;
+  }
+  .ms-float img{
+    display:block;width:100%;height:100%;
+    object-fit:cover;
+    border-radius:calc(var(--p,0) * 8px);
+    -webkit-user-drag:none;user-select:none;
+  }
+  /* 首屏中间的大标题：和照片一起缩小，最后正好落进卡片标题 */
+  /* 首屏标题：About 在照片左侧、Me 在右侧，随照片一起缩小，最后正好成为卡片标题 */
+  .ms-hero-title{
+    position:absolute;
+    left:0;top:0;
+    width:100%;height:0;
+    z-index:2;
+    font-size:clamp(34px,5vw,84px);
+    line-height:1;
+    letter-spacing:.12em;
+    color:#4c4639;
+    pointer-events:none;
+    will-change:left,top,width,font-size,opacity;
+  }
+  .ms-hero-title .ms-hw{
+    position:absolute;top:0;
+    white-space:nowrap;
+    transform:translateY(-50%);
+  }
+  .ms-hero-title .ms-hw-l{right:calc(100% + var(--hgap,20px))}
+  .ms-hero-title .ms-hw-r{left:calc(100% + var(--hgap,20px))}
+  .ms-hero-title em{font-style:normal;color:#ef6a9f}
+  .ms-cue{
+    position:absolute;left:50%;bottom:clamp(16px,4.5vh,42px);
+    transform:translateX(-50%);
+    z-index:2;
+    display:flex;flex-direction:column;align-items:center;gap:10px;
+    padding:10px 14px;border:0;background:none;cursor:pointer;
+    font:inherit;font-size:clamp(9px,1.3vmin,12px);
+    letter-spacing:.36em;color:rgba(93,86,70,.55);
+    transition:opacity .3s ease;
+  }
+  .ms-cue i{
+    width:1px;height:clamp(24px,4vh,38px);
+    background:linear-gradient(180deg, rgba(93,86,70,.55), rgba(93,86,70,0));
+    transform-origin:top center;
+    animation:msCue 1.9s ease-in-out infinite;
+  }
+  @keyframes msCue{0%,100%{transform:scaleY(.45);opacity:.45}50%{transform:scaleY(1);opacity:1}}
+
+  .ms-scroll{
+    position:absolute;inset:0;
+    overflow-y:auto;overflow-x:hidden;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .ms-scroll::-webkit-scrollbar{display:none}
+  /* 先留出一段滚动距离，让首图随滚动慢慢缩小 */
+  .ms-lead{height:175vh}
+
+  .ms-inner{
+    max-width:min(88vw, 880px);
+    margin:0 auto;
+    text-align:center;
+    padding:clamp(26px,5vh,54px) clamp(18px,4vw,46px) clamp(30px,5vh,52px);
+    border-radius:26px;
+    background:rgba(255,251,250,.74);
+    box-shadow:0 30px 80px rgba(203,146,172,.18);
+    backdrop-filter:blur(6px);
+  }
+  /* 标题中间预留的小相纸位置，悬浮图最终精确落在这里 */
+  .ms-photo-slot{
+    display:block;
+    width:clamp(72px, 11vmin, 142px);
+    height:auto;
+    padding:4px;
+    background:#fffdf9;
+    border-radius:12px;
+    box-shadow:0 12px 30px rgba(198,136,164,.34);
+  }
+  .ms-title{
+    /* 三栏布局：About 靠右、照片居中、Me 靠左，保证照片正好落在页面中轴 */
+    display:grid;
+    grid-template-columns:1fr auto 1fr;
+    align-items:center;
+    column-gap:clamp(10px,1.8vw,22px);
+    font-size:clamp(30px,6vmin,60px);
+    font-weight:400;
+    letter-spacing:.12em;
+    color:#4c4639;
+  }
+  .ms-title > span{justify-self:end}
+  .ms-title > em{justify-self:start}
+  .ms-title em{font-style:normal;color:#ef6a9f}
+  .ms-sub{
+    margin-top:10px;
+    font-size:clamp(9px,1.35vmin,13px);
+    letter-spacing:.3em;
+    color:#e07aa6;
+  }
+  .ms-sub::before,.ms-sub::after{content:'♡';margin:0 .9em;opacity:.75}
+  .ms-collage{
+    width:100%;
+    margin-top:clamp(24px,4.5vh,46px);
+    padding:9px;
+    background:#fffdf9;
+    border-radius:20px;
+    box-shadow:0 24px 56px rgba(190,132,160,.22);
+  }
+  .ms-contact{
+    margin-top:clamp(22px,4vh,38px);
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    align-items:center;
+  }
+
+  /* ---------- Study Proposal：现代极简淡色单页 ---------- */
+  .proposal{
+    position:absolute;inset:0;z-index:1;
+    display:none;
+    background:#f4f1ea;
+    color:#1b1a17;
+    overflow-y:auto;overflow-x:hidden;
+    scrollbar-width:none;
+  }
+  .proposal::-webkit-scrollbar{display:none}
+  .proposal.is-locked{overflow:hidden}
+  .chapter.proposal-mode .proposal{display:block}
+  .chapter.proposal-mode .chapter-head,
+  .chapter.proposal-mode .chapter-body,
+  .chapter.proposal-mode .chapter-foot,
+  .chapter.proposal-mode #chapterBg{display:none}
+  .chapter.intro-playing .chapter-bar{opacity:0;pointer-events:none}
+
+  /* 滚动时给 back / 序号留一点底，避免压在正文与跑马灯上 */
+  .proposal-mode .chapter-bar .back,
+  .proposal-mode .chapter-bar .chapter-index{
+    padding:6px 10px;
+    margin:-6px -10px;
+    border-radius:3px;
+    background:rgba(246,243,236,.92);
+  }
+
+  .pr-page{
+    padding:0 clamp(18px,4.2vw,56px);
+    font-family:'Inter','Segoe UI',system-ui,sans-serif;
+  }
+  /* 第一屏：居中的刊头带 + 压在其上的照片 + 下方的说明 */
+  .pr-hero{
+    position:relative;
+    height:100svh;
+  }
+  .pr-hero .pr-marquee{
+    position:absolute;
+    left:0;right:0;top:50%;
+    transform:translateY(-50%);
+  }
+
+  /* 顶部：流动的文字（一条刊头带） */
+  .pr-marquee{
+    overflow:hidden;
+    border-top:1px solid rgba(27,26,23,.14);
+    border-bottom:1px solid rgba(27,26,23,.14);
+    padding:clamp(16px,2.6vh,26px) clamp(18px,4.2vw,56px);
+    margin-left:calc(-1 * clamp(18px,4.2vw,56px));
+    margin-right:calc(-1 * clamp(18px,4.2vw,56px));
+  }
+  .pr-track{
+    display:flex;width:max-content;
+    white-space:nowrap;
+    font-family:'Cormorant Garamond',Georgia,"Times New Roman",serif;
+    font-weight:500;
+    font-size:clamp(30px,5.4vw,82px);
+    line-height:1.08;
+    letter-spacing:.015em;
+    text-transform:uppercase;
+    will-change:transform;
+  }
+
+  .pr-head{
+    position:absolute;
+    left:0;right:0;
+    top:calc(50% + clamp(128px,18vh,184px));
+    max-width:56ch;
+  }
+  .pr-kicker{
+    position:absolute;
+    left:0;
+    top:clamp(96px,20vh,180px);
+    font-family:'Cormorant Garamond',Georgia,"Times New Roman",serif;
+    font-style:italic;
+    font-weight:400;
+    font-size:clamp(30px,4vw,62px);
+    line-height:1;
+    letter-spacing:.01em;
+    color:rgba(27,26,23,.7);
+  }
+  .pr-h1{
+    font-family:'Cormorant Garamond',Georgia,"Times New Roman",serif;
+    font-weight:500;
+    font-size:clamp(24px,2.6vw,36px);
+    line-height:1.15;
+    letter-spacing:.005em;
+  }
+  .pr-lead{
+    margin-top:8px;
+    font-family:'Inter','Segoe UI',system-ui,sans-serif;
+    font-size:clamp(12px,1.1vw,13px);
+    line-height:1.8;
+    letter-spacing:.002em;
+    color:rgba(27,26,23,.62);
+    max-width:46ch;
+  }
+
+  /* 十张风景：编号 + 小图 + 说明 */
+  .pr-plates{list-style:none;margin-top:clamp(10px,2.4vh,22px)}
+  .pr-plate{
+    display:grid;
+    grid-template-columns:clamp(30px,3.4vw,50px) clamp(92px,12.5vw,178px) minmax(0,1fr);
+    gap:clamp(14px,2.4vw,34px);
+    align-items:center;
+    padding:clamp(16px,2.8vh,28px) 0;
+    border-top:1px solid rgba(27,26,23,.12);
+  }
+  .pr-plate:last-child{border-bottom:1px solid rgba(27,26,23,.12)}
+  .pr-no{
+    align-self:start;
+    padding-top:2px;
+    font-size:clamp(9px,1vw,11px);
+    letter-spacing:.18em;
+    color:rgba(27,26,23,.4);
+  }
+  .pr-plate img{
+    display:block;width:100%;
+    aspect-ratio:4/3;
+    object-fit:cover;
+    border-radius:2px;
+    transition:transform .7s cubic-bezier(.2,.6,.2,1);
+  }
+  .pr-plate:hover img{transform:scale(1.04)}
+  .pr-plate-body h3{
+    font-family:'Cormorant Garamond',Georgia,"Times New Roman",serif;
+    font-weight:500;
+    font-size:clamp(19px,2.3vw,31px);
+    line-height:1.1;
+    letter-spacing:.005em;
+  }
+  .pr-plate-body h3 em{
+    font-style:normal;
+    font-size:clamp(8px,1vw,10px);
+    letter-spacing:.2em;text-transform:uppercase;
+    color:rgba(27,26,23,.42);
+    margin-left:clamp(8px,1.2vw,16px);
+    vertical-align:middle;
+  }
+  .pr-plate-body p{
+    margin-top:7px;
+    font-size:clamp(11px,1.2vw,13.5px);
+    line-height:1.8;
+    color:rgba(27,26,23,.66);
+    max-width:58ch;
+  }
+
+  .pr-foot{
+    display:flex;justify-content:space-between;gap:18px;
+    padding:clamp(16px,3vh,26px) 0 clamp(28px,6vh,52px);
+    font-size:clamp(8px,1vw,10px);
+    letter-spacing:.18em;text-transform:uppercase;
+    color:rgba(27,26,23,.5);
+  }
+
+  /* 开场：深色底 + 开花图 + 计数器 */
+  .pr-intro{
+    position:absolute;inset:0;z-index:5;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:clamp(14px,2.4vh,26px);
+    background:#131211;
+    overflow:hidden;
+  }
+  .pr-bloom-wrap{
+    position:relative;
+    width:min(42vw,640px);
+    aspect-ratio:16/9;
+  }
+  .pr-bloom{
+    position:absolute;inset:0;
+    width:100%;height:100%;
+    object-fit:cover;
+    border-radius:2px;
+    will-change:clip-path,transform;
+  }
+  .pr-count{
+    display:flex;
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:clamp(34px,5vw,72px);
+    line-height:.86;
+    letter-spacing:-.02em;
+    color:#f2eee5;
+  }
+  .pr-digit{
+    position:relative;
+    width:.62em;height:1em;
+    overflow:hidden;
+  }
+  .pr-col-num{
+    position:absolute;left:0;top:0;width:100%;
+    display:flex;flex-direction:column;
+    will-change:transform;
+  }
+  .pr-col-num span{
+    height:1em;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .pr-intro-meta{
+    position:absolute;left:clamp(18px,4.2vw,56px);top:clamp(18px,4vh,40px);
+    font-size:clamp(8px,1vw,10px);
+    letter-spacing:.3em;text-transform:uppercase;
+    color:rgba(242,238,229,.42);
+  }
+  /* 开场结束后照片钉在跑马灯正中间，随内容滚动，不脱离页面 */
+  .pr-intro.is-pinned{
+    display:block;
+    background:transparent;
+    pointer-events:none;
+    z-index:6;
+  }
+  .pr-intro.is-pinned .pr-bloom-wrap{
+    position:absolute;
+    left:50%;
+    top:var(--pin-y,120px);
+    transform:translate(-50%,-50%);
+  }
+
+  @media (max-width:860px){
+    .pr-bloom-wrap{width:78vw}
+    .pr-plate{grid-template-columns:34px minmax(0,1fr);gap:12px 14px;align-items:start}
+    .pr-plate img{grid-column:2;max-width:240px}
+    .pr-plate-body{grid-column:2}
+    .pr-foot{flex-direction:column;gap:8px}
+  }
+
+  /* 房间里的空气感：缓慢移动的柔光 */
+  .sweep{
+    position:absolute;
+    inset:-10%;
+    background:linear-gradient(115deg,
+      rgba(255,250,235,0) 30%,
+      rgba(255,250,235,.30) 48%,
+      rgba(255,255,255,0) 62%);
+    mix-blend-mode:soft-light;
+    opacity:0;
+    pointer-events:none;
+  }
+  #room.show .sweep{
+    opacity:1;
+    animation:sweep 18s ease-in-out infinite alternate;
+  }
+  @keyframes sweep{
+    from{transform:translateX(-6%)}
+    to  {transform:translateX(6%)}
+  }
+
+  /* ---------- 白光过场 ---------- */
+  .white{
+    position:fixed;
+    inset:0;
+    z-index:50;
+    pointer-events:none;
+    background:radial-gradient(circle at var(--rx,50%) var(--ry,58.5%),
+      #fffdf6 0%, #fff8e8 42%, #ffffff 100%);
+    clip-path:circle(0px at var(--rx,50%) var(--ry,58.5%));
+    transition:clip-path .95s cubic-bezier(.5,.05,.35,1);
+  }
+  .white.active{
+    clip-path:circle(165vmax at var(--rx,50%) var(--ry,58.5%));
+  }
+  .white.dissolve{
+    opacity:0;
+    transition:opacity .9s ease .05s;
+  }
+
+  /* ---------- 视频转场（与门图同帧，播放时无缝接管） ---------- */
+  .video-wrap{
+    position:absolute;
+    inset:0;
+    z-index:4;
+    display:none;
+    background:#fbfaf6;
+  }
+  .video-wrap.show{display:block}
+
+  .gate-video{
+    display:block;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+  }
+
+  /* 遮住视频右下角的平台水印：局部重度虚化 + 羽化边缘 */
+  .wm-patch{
+    position:absolute;
+    right:0;
+    bottom:0;
+    width:17%;
+    height:11%;
+    pointer-events:none;
+    backdrop-filter:blur(30px) saturate(.9) brightness(1.02);
+    -webkit-backdrop-filter:blur(30px) saturate(.9) brightness(1.02);
+    -webkit-mask-image:radial-gradient(ellipse 100% 100% at 100% 100%, #000 68%, transparent 100%);
+    mask-image:radial-gradient(ellipse 100% 100% at 100% 100%, #000 68%, transparent 100%);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    #gate:not(.entering) .zoom.idle{animation:none}
+    .glow{animation:none;opacity:.6}
+    .pull.kicked{animation:none}
+    #room.show .sweep{animation:none}
+  }
+</style>
+</head>
+<body>
+
+  <!-- 门页 -->
+  <main id="gate" class="screen">
+    <div class="backdrop"><img src="assets/door.webp" alt=""></div>
+    <div class="frame">
+      <div class="zoom idle" id="gateZoom">
+        <img class="art" src="assets/door.webp" alt="一扇挂着拉环的门，门牌上写着 Welcome to my world">
+      </div>
+
+      <div class="video-wrap" id="videoWrap">
+        <video class="gate-video" id="gateVideo" muted playsinline preload="auto"></video>
+        <div class="wm-patch"></div>
+      </div>
+
+      <button class="pull" id="pull" aria-label="拉下拉环，进入 Xinyang 的世界">
+        <span class="glow"></span>
+        <span class="ring-cue"></span>
+      </button>
+
+      <div class="hint" id="hint">pull the ring</div>
+    </div>
+  </main>
+
+  <!-- 房间页 -->
+  <section id="room" class="screen" aria-hidden="true">
+    <div class="backdrop"><img src="assets/room.webp" alt=""></div>
+    <div class="frame">
+      <div class="zoom">
+        <div class="parallax">
+          <img class="art" src="assets/room.webp" alt="Xinyang 的世界：淡绿色碎花房间，四个气泡里分别装着 JORYA、BARACUTA 与 Study Proposal">
+          <div class="sweep"></div>
+
+          <button class="bubble" data-key="myself"
+                  style="left:16.1%;top:65.5%;width:14.6%;height:16.2%"
+                  aria-label="打开 Myself 章节"></button>
+          <button class="bubble" data-key="jorya"
+                  style="left:70.5%;top:23.1%;width:18.8%;height:33.4%"
+                  aria-label="打开 JORYA 章节"></button>
+          <button class="bubble" data-key="baracuta"
+                  style="left:85.4%;top:40.1%;width:19.2%;height:34.2%"
+                  aria-label="打开 BARACUTA 章节"></button>
+          <button class="bubble" data-key="proposal"
+                  style="left:73.7%;top:63.4%;width:19.2%;height:34.2%"
+                  aria-label="打开 Study Proposal 章节"></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 章节页：一屏一图，左右翻页 -->
+  <section class="chapter" id="chapter" aria-hidden="true" aria-label="作品章节">
+    <div class="chapter-bg" id="chapterBg" aria-hidden="true"><img id="chapterBgImg" alt=""></div>
+
+    <div class="chapter-bar">
+      <button class="back" id="chapterBack" aria-label="返回房间">←&nbsp;&nbsp;back</button>
+      <span class="chapter-index" id="chapterIndex"></span>
+    </div>
+
+    <h1 class="chapter-head" id="chapterHead" hidden></h1>
+
+    <div class="chapter-body">
+      <button class="nav" id="prevSlide" aria-label="上一张" hidden>‹</button>
+      <div class="stage" id="stage"></div>
+      <button class="nav" id="nextSlide" aria-label="下一张" hidden>›</button>
+    </div>
+
+    <div class="chapter-foot">
+      <div class="contact" id="contact" hidden>
+        <p class="contact-line">Contact Me：<a id="contactMail" href="mailto:lov_1017@qq.com">lov_1017@qq.com</a></p>
+        <p class="contact-sub" id="contactNote">I look forward to connecting with you.</p>
+      </div>
+      <span class="counter" id="counter"></span>
+      <span class="fan-hint" id="fanHint" hidden>拖动 / 滚轮</span>
+    </div>
+
+    <!-- Myself：首图随滚动缩小进标题，之后继续下滑看介绍 -->
+    <div class="myself" id="myselfView" aria-label="Myself">
+      <div class="ms-float" id="msFloat" style="--p:0">
+        <img src="assets/myself-cover.webp" alt="Myself 封面" draggable="false">
+      </div>
+      <div class="ms-hero-title" id="msHeroTitle" aria-hidden="true"><span class="ms-hw ms-hw-l">About</span><span class="ms-hw ms-hw-r"><em>Me</em></span></div>
+      <button class="ms-cue" id="msCue" type="button" aria-label="向下滑动">向下滑<i></i></button>
+      <div class="ms-scroll" id="msScroll">
+        <div class="ms-lead"></div>
+        <div class="ms-inner">
+          <h2 class="ms-title"><span>About</span><img class="ms-photo-slot" id="msSlot" src="assets/myself-cover.webp" alt="Myself 照片"><em>Me</em></h2>
+          <p class="ms-sub">different versions of me</p>
+          <img class="ms-collage" src="assets/myself-01.webp" alt="Myself 介绍">
+          <div class="ms-contact">
+            <p class="contact-line">Contact Me：<a href="mailto:lov_1017@qq.com">lov_1017@qq.com</a></p>
+            <p class="contact-sub">I look forward to connecting with you.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Study Proposal：极简单页 + GSAP 开场动画 -->
+    <div class="proposal" id="proposalView" aria-label="Study Proposal">
+      <div class="pr-page">
+        <div class="pr-hero">
+          <p class="pr-kicker pr-reveal">Study Proposal</p>
+          <div class="pr-marquee pr-reveal" aria-hidden="true">
+            <div class="pr-track" id="prTrackA"><span>Ten landscapes — Still water — Field notes — Quiet horizons — </span><span>Ten landscapes — Still water — Field notes — Quiet horizons — </span></div>
+          </div>
+
+          <header class="pr-head pr-reveal">
+            <h1 class="pr-h1">Field notes.</h1>
+            <p class="pr-lead">Ten landscapes photographed between first light and last light. Nothing staged, nothing added — only weather, distance and the time it takes to stand still.</p>
+          </header>
+        </div>
+
+        <ol class="pr-plates">
+          <li class="pr-plate pr-reveal">
+            <span class="pr-no">01</span>
+            <img src="assets/proposal-hero.webp" alt="晨雾中的湖面与远山">
+            <div class="pr-plate-body">
+              <h3>Still Water <em>Lake · Dawn</em></h3>
+              <p>Fog resting on the surface before the light arrives; the water reads like paper.</p>
+            </div>
+          </li>
+          <li class="pr-plate pr-reveal">
+            <span class="pr-no">02</span>
+            <img src="assets/proposal-02.webp" alt="晨雾中的松林">
+            <div class="pr-plate-body">
+              <h3>Pines <em>Forest · Fog</em></h3>
+              <p>A stand of firs holding mist between the trunks — texture without detail.</p>
+            </div>
+          </li>
+          <li class="pr-plate pr-reveal">
+            <span class="pr-no">03</span>
+            <img src="assets/proposal-03.webp" alt="暮色中的沙丘">
+            <div class="pr-plate-body">
+              <h3>Dune <em>Desert · Dusk</em></h3>
+              <p>Wind draws one long curve; almost no shadow, almost no sense of scale.</p>
+            </div>
+          </li>
+          <li class="pr-plate pr-reveal">
+            <span class="pr-no">04</span>
+            <img src="assets/proposal-04.webp" alt="蓝调时刻的海岸线">
+            <div class="pr-plate-body">
+              <h3>Coastline <em>Atlantic · Blue hour</em></h3>
+              <p>A long exposure flattens the sea into a single soft band of blue.</p>
+            </div>
+          </li>
+          <li class="pr-plate pr-reveal">
+            <span class="pr-no">05</span>
+            <img src="assets/proposal-05.webp" alt="晨雾中的层叠群山">
+            <div class="pr-plate-body">
+              <h3>Ridges <em>Prealps · Sunrise</em></h3>
+              <p>Layer after layer of hills, each one paler than the one in front of it.</p>
+            </div>
+          </li>
+          <li class="pr-plate pr-reveal">
+            <span class="pr-no">06</span>
+            <img src="assets/proposal-06.webp" alt="雪原上的孤树">
+            <div class="pr-plate-body">
+              <h3>Field <em>Snow · Winter</em></h3>
+              <p>One bare tree in an empty field: the quietest composition winter offers.</p>
+            </div>
+          </li>
+          <li class="pr-plate pr-reveal">
+            <span class="pr-no">07</span>
+            <img src="assets/proposal-07.webp" alt="正午的海平线">
+            <div class="pr-plate-body">
+              <h3>Open Sea <em>North Sea · Noon</em></h3>
+              <p>Water and sky meet in the same colour; the horizon almost disappears.</p>
+            </div>
+          </li>
+          <li class="pr-plate pr-reveal">
+            <span class="pr-no">08</span>
+            <img src="assets/proposal-08.webp" alt="雾中的白桦林">
+            <div class="pr-plate-body">
+              <h3>Birch <em>Forest · Haze</em></h3>
+              <p>White trunks dissolving into white air — closer to drawing than photography.</p>
+            </div>
+          </li>
+          <li class="pr-plate pr-reveal">
+            <span class="pr-no">09</span>
+            <img src="assets/proposal-09.webp" alt="航拍浅滩与浪线">
+            <div class="pr-plate-body">
+              <h3>Shoreline <em>Aerial · Midday</em></h3>
+              <p>Foam traces a thin line where pale sand meets pale water.</p>
+            </div>
+          </li>
+          <li class="pr-plate pr-reveal">
+            <span class="pr-no">10</span>
+            <img src="assets/proposal-10.webp" alt="暮色中的层叠山脊">
+            <div class="pr-plate-body">
+              <h3>Dusk <em>Mountains · Evening</em></h3>
+              <p>Ridges fold into violet as the light leaves the valley.</p>
+            </div>
+          </li>
+        </ol>
+
+        <footer class="pr-foot pr-reveal">
+          <span>Contact — lov_1017@qq.com</span>
+          <span>© 2026 Xinyang</span>
+        </footer>
+      </div>
+
+      <div class="pr-intro" id="prIntro">
+        <div class="pr-bloom-wrap">
+          <img class="pr-bloom" src="assets/proposal-hero.webp" alt="">
+          <img class="pr-bloom" src="assets/proposal-02.webp" alt="">
+          <img class="pr-bloom" src="assets/proposal-03.webp" alt="">
+          <img class="pr-bloom" src="assets/proposal-04.webp" alt="">
+          <img class="pr-bloom" src="assets/proposal-05.webp" alt="">
+          <img class="pr-bloom" src="assets/proposal-06.webp" alt="">
+          <img class="pr-bloom" src="assets/proposal-07.webp" alt="">
+          <img class="pr-bloom" src="assets/proposal-08.webp" alt="">
+          <img class="pr-bloom" src="assets/proposal-09.webp" alt="">
+          <img class="pr-bloom" src="assets/proposal-10.webp" alt="">
+        </div>
+        <div class="pr-count" aria-hidden="true">
+          <span class="pr-digit"><span class="pr-col-num" id="prTens"></span></span>
+          <span class="pr-digit"><span class="pr-col-num" id="prOnes"></span></span>
+        </div>
+        <div class="pr-intro-meta">Loading — Study Proposal</div>
+      </div>
+    </div>
+
+    <!-- BARACUTA：顶部透明拼贴 + 论文逐页 -->
+    <div class="baracuta" id="baracutaView" aria-label="BARACUTA">
+      <div class="bc-page">
+        <img class="bc-collage" src="assets/baracuta-cut.webp" alt="BARACUTA 拼贴视觉">
+
+        <div class="bc-doc">
+          <div class="bc-doc-head"><span>BARACUTA — Marketing Strategy</span><span>24 pages · 2026</span></div>
+          <img src="assets/baracuta/doc-01.webp" alt="论文第 1 页">
+          <img src="assets/baracuta/doc-02.webp" alt="论文第 2 页" loading="lazy">
+          <img src="assets/baracuta/doc-03.webp" alt="论文第 3 页" loading="lazy">
+          <img src="assets/baracuta/doc-04.webp" alt="论文第 4 页" loading="lazy">
+          <img src="assets/baracuta/doc-05.webp" alt="论文第 5 页" loading="lazy">
+          <img src="assets/baracuta/doc-06.webp" alt="论文第 6 页" loading="lazy">
+          <img src="assets/baracuta/doc-07.webp" alt="论文第 7 页" loading="lazy">
+          <img src="assets/baracuta/doc-08.webp" alt="论文第 8 页" loading="lazy">
+          <img src="assets/baracuta/doc-09.webp" alt="论文第 9 页" loading="lazy">
+          <img src="assets/baracuta/doc-10.webp" alt="论文第 10 页" loading="lazy">
+          <img src="assets/baracuta/doc-11.webp" alt="论文第 11 页" loading="lazy">
+          <img src="assets/baracuta/doc-12.webp" alt="论文第 12 页" loading="lazy">
+          <img src="assets/baracuta/doc-13.webp" alt="论文第 13 页" loading="lazy">
+          <img src="assets/baracuta/doc-14.webp" alt="论文第 14 页" loading="lazy">
+          <img src="assets/baracuta/doc-15.webp" alt="论文第 15 页" loading="lazy">
+          <img src="assets/baracuta/doc-16.webp" alt="论文第 16 页" loading="lazy">
+          <img src="assets/baracuta/doc-17.webp" alt="论文第 17 页" loading="lazy">
+          <img src="assets/baracuta/doc-18.webp" alt="论文第 18 页" loading="lazy">
+          <img src="assets/baracuta/doc-19.webp" alt="论文第 19 页" loading="lazy">
+          <img src="assets/baracuta/doc-20.webp" alt="论文第 20 页" loading="lazy">
+          <img src="assets/baracuta/doc-21.webp" alt="论文第 21 页" loading="lazy">
+          <img src="assets/baracuta/doc-22.webp" alt="论文第 22 页" loading="lazy">
+          <img src="assets/baracuta/doc-23.webp" alt="论文第 23 页" loading="lazy">
+          <img src="assets/baracuta/doc-24.webp" alt="论文第 24 页" loading="lazy">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 白光蒙层 -->
+  <div class="white" id="white"></div>
+
+<script src="assets/lib/gsap.min.js"></script>
+<script>
+(function () {
+  const CONFIG = {
+    // 有位视频就用视频转场；留空则使用纯 CSS 伪开门
+    transitionVideo: 'assets/door-open.mp4'
+  };
+
+  const gate      = document.getElementById('gate');
+  const gateZoom  = document.getElementById('gateZoom');
+  const pull      = document.getElementById('pull');
+  const hint      = document.getElementById('hint');
+  const room      = document.getElementById('room');
+  const white     = document.getElementById('white');
+  const video     = document.getElementById('gateVideo');
+  const videoWrap = document.getElementById('videoWrap');
+
+  // 提前把视频喂进解码器，点击时不用等缓冲
+  if (CONFIG.transitionVideo) {
+    video.src = CONFIG.transitionVideo;
+    video.load();
+  }
+
+  const reduce   = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const THRESHOLD = 30;   // 下拉多少像素算"拉开"
+
+  let entered  = false;
+  let dragging = false;
+  let moved    = false;
+  let startY   = 0;
+  let dist     = 0;
+
+  /* ---------- 拉环交互 ---------- */
+  function setPull(d) {
+    dist = d;
+    const p = Math.min(d, 70) / 70;   // 0 ~ 1 的拉力值
+    pull.style.setProperty('--p', p.toFixed(3));
+    pull.classList.toggle('holding', p > 0.06);
+    gateZoom.classList.toggle('tugging', p > 0.06);
+    // 拉的时候画面微微向前凑一点，像被门吸过去
+    gateZoom.style.transform = 'scale(' + (1 + p * 0.05).toFixed(4) + ')';
+  }
+
+  pull.addEventListener('pointerdown', function (e) {
+    if (entered) return;
+    dragging = true;
+    moved = false;
+    startY = e.clientY;
+    pull.setPointerCapture(e.pointerId);
+    hint.classList.add('hide');
+    gateZoom.classList.remove('idle');   // 交互时停掉待机呼吸，避免和拉力叠加
+  });
+
+  pull.addEventListener('pointermove', function (e) {
+    if (!dragging) return;
+    const d = Math.max(0, e.clientY - startY);
+    if (d > 4) moved = true;
+    setPull(Math.min(d, 70));
+  });
+
+  pull.addEventListener('pointerup', function () {
+    if (!dragging) return;
+    dragging = false;
+    if (dist >= THRESHOLD) { enter(); return; }
+    // 没拉够，弹回去（画面也跟着松回来）
+    setPull(0);
+  });
+
+  pull.addEventListener('pointercancel', function () {
+    dragging = false;
+    setPull(0);
+  });
+
+  // 直接点一下也能进（拖拽结束后浏览器补发的 click 要忽略）
+  pull.addEventListener('click', function () {
+    if (entered) return;
+    if (moved) { moved = false; return; }
+    kickThenEnter();
+  });
+
+  // 单击：先快速"拉一下"，再进
+  function kickThenEnter() {
+    gateZoom.classList.remove('idle');
+    const t0 = performance.now();
+    const dur = 260;
+    (function step(now) {
+      const k = Math.min((now - t0) / dur, 1);
+      setPull(Math.sin(k * Math.PI) * 55);   // 0 → 1 → 0
+      if (k < 1) requestAnimationFrame(step);
+      else enter();
+    })(t0);
+  }
+
+  /* ---------- 进入 ---------- */
+  function enter() {
+    if (entered) return;
+    entered = true;
+
+    pull.classList.add('done');
+    hint.classList.add('hide');
+
+    // 白光从拉环的位置炸开
+    const r = pull.getBoundingClientRect();
+    white.style.setProperty('--rx', (r.left + r.width / 2) + 'px');
+    white.style.setProperty('--ry', (r.top + r.height / 2) + 'px');
+
+    if (CONFIG.transitionVideo) {
+      videoWrap.classList.add('show');
+      video.currentTime = 0;
+      video.addEventListener('ended', revealRoom, { once: true });
+      video.play().catch(runCss);
+      video.addEventListener('error', runCss, { once: true });
+      // 兜底：视频卡住也不能把用户困在门口
+      setTimeout(function () { if (!room.classList.contains('show')) runCss(); }, 9000);
+      return;
+    }
+    runCss();
+  }
+
+  function runCss() {
+    videoWrap.classList.remove('show');
+    const t1 = reduce ? 320 : 950;    // 白光铺满
+    const t2 = reduce ? 380 : 1450;   // 白光开始消散
+    const t3 = reduce ? 800 : 2400;   // 门页彻底移除
+
+    gate.classList.add('entering');
+    gateZoom.classList.remove('tugging');
+    gateZoom.style.transform = 'scale(1.75)';
+
+    setTimeout(function () { white.classList.add('active'); }, reduce ? 0 : 220);
+    setTimeout(function () {
+      room.classList.add('show');
+      room.setAttribute('aria-hidden', 'false');
+    }, t1);
+    setTimeout(function () { white.classList.add('dissolve'); }, t2);
+    setTimeout(function () {
+      gate.style.display = 'none';
+      white.style.display = 'none';
+    }, t3);
+  }
+
+  // 视频播完后走同一套白光收尾
+  function revealRoom() {
+    white.classList.add('active');
+    setTimeout(function () {
+      room.classList.add('show');
+      room.setAttribute('aria-hidden', 'false');
+      white.classList.add('dissolve');
+    }, 600);
+    setTimeout(function () {
+      video.pause();
+      videoWrap.classList.remove('show');
+    }, 1900);
+  }
+
+  /* ---------- 提示 ---------- */
+  setTimeout(function () { if (!entered) hint.classList.add('in'); }, 2400);
+  pull.addEventListener('pointerenter', function () { hint.classList.add('hide'); });
+
+  /* ---------- 房间里的轻微视差 ---------- */
+  const roomParallax = room.querySelector('.parallax');
+  window.addEventListener('pointermove', function (e) {
+    if (!room.classList.contains('show')) return;
+    const x = (e.clientX / window.innerWidth - 0.5) * 10;
+    const y = (e.clientY / window.innerHeight - 0.5) * 8;
+    roomParallax.style.transform = 'translate3d(' + (-x) + 'px,' + (-y) + 'px,0) scale(1.02)';
+  });
+
+  /* ---------- 章节页 ---------- */
+  // 每章往里加图片即可，字符串或 {src, caption} 都行
+  // 作品集 PDF 已拆成 23 张幻灯片图
+  const JORYA_DECK = Array.from({ length: 23 }, function (_, i) {
+    return 'assets/jorya/deck/deck-' + String(i + 1).padStart(2, '0') + '.webp';
+  });
+
+  const CHAPTERS = {
+    myself:   {
+      title: 'Myself',
+      bg: 'assets/myself-bg.webp',
+      veil: 0.58,          // 背景本身很浅，纱层压淡一点让条纹透出来
+      view: 'myself',      // 走整屏首图 + 页面转场 + About 滚动介绍
+      images: []
+    },
+    jorya:    {
+      title: 'JORYA',
+      bg: 'assets/jorya-bg.webp',
+      images: [],
+      // 首张为设计板，其余为作品集幻灯片；fan 模式下走拍立得扇形滑块
+      fan: [{ src: 'assets/jorya-01.webp', fit: 'contain' }].concat(JORYA_DECK)
+    },
+    baracuta: {
+      title: 'BARACUTA',
+      bg: 'assets/baracuta-bg.webp',
+      view: 'baracuta',   // 顶部拼贴 + 论文逐页，独立页面
+      images: []
+    },
+    proposal: {
+      title: 'Study Proposal',
+      view: 'proposal',    // 走独立的极简单页 + GSAP 开场
+      images: []
+    }
+  };
+  const CHAPTER_KEYS = Object.keys(CHAPTERS);
+
+  const chapter    = document.getElementById('chapter');
+  const chapterBg  = document.getElementById('chapterBg');
+  const chapterBgImg = document.getElementById('chapterBgImg');
+  const chapterIdx = document.getElementById('chapterIndex');
+  const chapterHead = document.getElementById('chapterHead');
+  const contactEl  = document.getElementById('contact');
+  const contactMail = document.getElementById('contactMail');
+  const contactNote = document.getElementById('contactNote');
+  const myselfView = document.getElementById('myselfView');
+  const msScroll   = document.getElementById('msScroll');
+  const msFloat    = document.getElementById('msFloat');
+  const msSlot     = document.getElementById('msSlot');
+  const msCue      = document.getElementById('msCue');
+  const msHeroTitle = document.getElementById('msHeroTitle');
+  const msTitle     = document.querySelector('.ms-title');
+  const msTitleL    = msTitle.querySelector('span');
+  const msTitleR    = msTitle.querySelector('em');
+  const proposalView = document.getElementById('proposalView');
+  const prIntro    = document.getElementById('prIntro');
+  const prPage     = proposalView.querySelector('.pr-page');
+  const prBlooms   = proposalView.querySelectorAll('.pr-bloom');
+  const prTens     = document.getElementById('prTens');
+  const prOnes     = document.getElementById('prOnes');
+  const prTrackA   = document.getElementById('prTrackA');
+  const prTrackB   = document.getElementById('prTrackB');
+  const stage      = document.getElementById('stage');
+  const counter    = document.getElementById('counter');
+  const fanHint    = document.getElementById('fanHint');
+  const prevBtn    = document.getElementById('prevSlide');
+  const nextBtn    = document.getElementById('nextSlide');
+  const backBtn    = document.getElementById('chapterBack');
+
+  let currentKey = null;
+  let slide = 0;
+  let fan = null;
+
+  /* ---------- 拍立得扇形无限滑块 ---------- */
+  // 核心：所有卡片由 JS 生成，gsap.utils.wrap 折叠索引实现无限循环（不克隆 DOM），
+  // gsap.ticker 逐帧插值，拖动/滚轮/触屏统一到同一个 target 上，松手吸附到最近一张。
+  function createFan(host, list, onIndex) {
+    const total = list.length;
+    const half = total / 2;
+    const wrap = gsap.utils.wrap(-half, total - half);
+
+    const view = document.createElement('div');
+    view.className = 'fan';
+    const cards = list.map(function (item, i) {
+      const src = typeof item === 'string' ? item : item.src;
+      const fit = typeof item === 'string' ? '' : (item.fit || '');
+      const el = document.createElement('figure');
+      el.className = 'card';
+      const img = document.createElement('img');
+      img.dataset.src = src;                        // 先不请求，翻到附近再加载
+      img.alt = 'JORYA 作品 ' + (i + 1);
+      img.decoding = 'async';
+      img.draggable = false;
+      if (fit === 'contain') img.className = 'contain';
+      img.addEventListener('load', function () { img.classList.add('loaded'); });
+      const cap = document.createElement('figcaption');
+      cap.innerHTML = '<span>JORYA</span><span>' + String(i + 1).padStart(2, '0') + '</span>';
+      el.appendChild(img);
+      el.appendChild(cap);
+      view.appendChild(el);
+      return el;
+    });
+
+    function ensure(i) {
+      const img = cards[i] && cards[i].querySelector('img');
+      if (img && !img.getAttribute('src')) img.src = img.dataset.src;
+    }
+    host.appendChild(view);
+
+    const state = { pos: 0 };
+    let target = 0;
+    let cardW = 320;
+    let step = 140;
+    let dragging = false;
+    let moved = false;
+    let startX = 0;
+    let startPos = 0;
+    let lastX = 0;
+    let lastT = 0;
+    let velocity = 0;
+    let wheelTimer = 0;
+    let lastIndex = -1;
+
+    function measure() {
+      cardW = cards[0].getBoundingClientRect().width || 320;
+      step = Math.max(70, cardW * 0.24);
+      render();
+    }
+
+    function render() {
+      for (let i = 0; i < total; i++) {
+        const off = wrap(i - state.pos);
+        const abs = Math.abs(off);
+        const el = cards[i];
+        if (abs > 2.5) {
+          if (el.style.visibility !== 'hidden') {
+            el.style.visibility = 'hidden';
+            el.style.opacity = '0';
+          }
+          continue;
+        }
+        const opacity = abs <= 0.9 ? 1 : Math.max(0, 1 - (abs - 0.9) / 1.4);
+        ensure(i);                                  // 快露出的卡片才去下载图片
+        const rot = off * 7.5;
+        const x = off * step;
+        const y = abs * abs * 3.6;
+        const scale = Math.max(0.76, 1 - abs * 0.055);
+        el.style.visibility = 'visible';
+        el.style.opacity = opacity.toFixed(3);
+        el.style.zIndex = String(600 - Math.round(abs * 100));
+        el.style.transform =
+          'translate(-50%,-50%) translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)' +
+          ' rotate(' + rot.toFixed(2) + 'deg) scale(' + scale.toFixed(3) + ')';
+      }
+      const idx = ((Math.round(state.pos) % total) + total) % total;
+      if (idx !== lastIndex) { lastIndex = idx; onIndex(idx); }
+    }
+
+    // 全局帧动画：state.pos 平滑追向 target，松手后 target 已吸附为整数
+    function tick() {
+      const d = gsap.ticker.deltaRatio(60);
+      state.pos += (target - state.pos) * Math.min(1, 0.14 * d);
+      if (Math.abs(target - state.pos) < 0.0004) state.pos = target;
+      render();
+    }
+    gsap.ticker.add(tick);
+
+    function snapTo(v) { target = v; }
+    function stepBy(n) { target = Math.round(target) + n; }
+
+    view.addEventListener('pointerdown', function (e) {
+      if (e.button) return;
+      dragging = true;
+      moved = false;
+      view.classList.add('dragging');
+      view.setPointerCapture(e.pointerId);
+      startX = lastX = e.clientX;
+      startPos = target;
+      lastT = performance.now();
+      velocity = 0;
+      clearTimeout(wheelTimer);
+    });
+
+    view.addEventListener('pointermove', function (e) {
+      if (!dragging) return;
+      const dx = e.clientX - startX;
+      if (Math.abs(dx) > 5) moved = true;
+      target = startPos - dx / step;
+      const now = performance.now();
+      const dt = Math.max(8, now - lastT);
+      velocity = -(e.clientX - lastX) / step / dt;  // 张 / 毫秒
+      lastX = e.clientX;
+      lastT = now;
+    });
+
+    function endDrag(e) {
+      if (!dragging) return;
+      dragging = false;
+      view.classList.remove('dragging');
+      if (!moved && e && e.clientX !== undefined) {
+        // 单击（不是拖动）：把点到的那张转到正中间
+        const hit = document.elementFromPoint(e.clientX, e.clientY);
+        const card = hit && hit.closest ? hit.closest('.card') : null;
+        const i = card ? cards.indexOf(card) : -1;
+        if (i >= 0) {
+          const off = wrap(i - target);
+          if (Math.abs(off) >= 0.4) snapTo(Math.round(target + off));
+        }
+      } else {
+        const glide = gsap.utils.clamp(-3, 3, velocity * 280);
+        snapTo(Math.round(target + glide));
+      }
+      if (e && e.pointerId !== undefined && view.hasPointerCapture(e.pointerId)) {
+        view.releasePointerCapture(e.pointerId);
+      }
+    }
+    view.addEventListener('pointerup', endDrag);
+    view.addEventListener('pointercancel', endDrag);
+
+    view.addEventListener('wheel', function (e) {
+      e.preventDefault();
+      const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      target += d * 0.0035;
+      clearTimeout(wheelTimer);
+      wheelTimer = setTimeout(function () { snapTo(Math.round(target)); }, 160);
+    }, { passive: false });
+
+    window.addEventListener('resize', measure);
+    measure();
+    gsap.fromTo(view, { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: .8, ease: 'power3.out' });
+
+    // 当前几张加载完后，空闲时再把其余卡片的图逐张取回来，避免一开页就抢满带宽
+    let idleTimer = 0;
+    function preloadRest() {
+      let i = 0;
+      (function next() {
+        if (!view.isConnected) return;
+        while (i < total && cards[i].querySelector('img').getAttribute('src')) i++;
+        if (i >= total) return;
+        ensure(i++);
+        idleTimer = setTimeout(next, 700);
+      })();
+    }
+    idleTimer = setTimeout(preloadRest, 1400);
+
+    return {
+      step: stepBy,
+      destroy: function () {
+        gsap.ticker.remove(tick);
+        clearTimeout(wheelTimer);
+        clearTimeout(idleTimer);
+        window.removeEventListener('resize', measure);
+        view.remove();
+      }
+    };
+  }
+
+  function renderSlide() {
+    const ch = CHAPTERS[currentKey];
+    if (fan) { fan.destroy(); fan = null; }
+    stage.innerHTML = '';
+
+    // Myself / Proposal / BARACUTA 用各自独立的全屏页面，不走普通滑块
+    if (ch.view === 'myself' || ch.view === 'proposal' || ch.view === 'baracuta') {
+      stage.classList.remove('fan-stage');
+      chapterHead.hidden = true;
+      chapter.classList.remove('has-head');
+      contactEl.hidden = true;
+      counter.hidden = true;
+      counter.textContent = '';
+      fanHint.hidden = true;
+      prevBtn.hidden = true;
+      nextBtn.hidden = true;
+      return;
+    }
+
+    // 章节大标题（如 Myself 的 About me）
+    chapterHead.textContent = ch.heading || '';
+    chapterHead.hidden = !ch.heading;
+    chapter.classList.toggle('has-head', !!ch.heading);
+
+    // 底部联系方式（有配置时替代页码显示）
+    const info = ch.contact;
+    contactEl.hidden = !info;
+    if (info) {
+      contactMail.textContent = info.email;
+      contactMail.href = 'mailto:' + info.email;
+      contactNote.textContent = info.note || '';
+    }
+    counter.hidden = !!info;
+
+    if (ch.fan) {
+      stage.classList.add('fan-stage');
+      fanHint.hidden = false;
+      counter.textContent = '01 / ' + String(ch.fan.length).padStart(2, '0');
+      fan = createFan(stage, ch.fan, function (idx) {
+        counter.textContent =
+          String(idx + 1).padStart(2, '0') + ' / ' + String(ch.fan.length).padStart(2, '0');
+      });
+      prevBtn.hidden = false;
+      nextBtn.hidden = false;
+      return;
+    }
+
+    stage.classList.remove('fan-stage');
+    fanHint.hidden = true;
+    const list = ch.images;
+    const total = list.length;
+
+    if (!total) {
+      if (!ch.heading) {
+        const wrap = document.createElement('div');
+        wrap.innerHTML =
+          '<div class="slide-title">' + ch.title + '</div>' +
+          '<div class="slide-note">内容待补充</div>';
+        stage.appendChild(wrap);
+      }
+      counter.textContent = '';
+    } else {
+      slide = (slide + total) % total;
+      const item = list[slide];
+      const img = document.createElement('img');
+      img.src = typeof item === 'string' ? item : item.src;
+      img.alt = ch.title + ' 作品 ' + (slide + 1);
+      stage.appendChild(img);
+      counter.textContent =
+        String(slide + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    }
+
+    const multi = total > 1;
+    prevBtn.hidden = !multi;
+    nextBtn.hidden = !multi;
+  }
+
+  function go(stepN) {
+    if (!currentKey) return;
+    if (fan) { fan.step(stepN); return; }
+    if (CHAPTERS[currentKey].images.length < 2) return;
+    slide += stepN;
+    renderSlide();
+  }
+
+  function openChapter(key) {
+    if (!CHAPTERS[key]) return;
+    currentKey = key;
+    slide = 0;
+    const view = CHAPTERS[key].view;
+    chapter.classList.toggle('myself-mode', view === 'myself');
+    chapter.classList.toggle('proposal-mode', view === 'proposal');
+    chapter.classList.toggle('baracuta-mode', key === 'baracuta');
+    if (view === 'myself') msReset();
+    if (view === 'proposal') playProposal();
+    const bg = CHAPTERS[key].bg;
+    if (bg) {
+      if (chapterBgImg.getAttribute('src') !== bg) chapterBgImg.src = bg;
+      chapterBg.classList.add('show');
+    } else {
+      chapterBg.classList.remove('show');
+    }
+    if (typeof CHAPTERS[key].veil === 'number') {
+      chapterBg.style.setProperty('--veil', CHAPTERS[key].veil);
+    } else {
+      chapterBg.style.removeProperty('--veil');
+    }
+    chapterIdx.textContent =
+      String(CHAPTER_KEYS.indexOf(key) + 1).padStart(2, '0') + ' / ' +
+      String(CHAPTER_KEYS.length).padStart(2, '0');
+    renderSlide();
+    chapter.classList.add('open');
+    chapter.setAttribute('aria-hidden', 'false');
+  }
+
+  /* ---------- Myself：首图随滚动缓慢缩小，落进标题中间 ---------- */
+  const MS_SHRINK = 1.5;                                   // 缩到最小需要滚动的屏数
+  let msEnd = 0;                                           // 首图落位的实际滚动距离
+
+  function msUpdate() {
+    if (!chapter.classList.contains('myself-mode')) return;
+    const base = myselfView.getBoundingClientRect();
+    const vw = base.width, vh = base.height;
+    if (!vw || !vh) return;
+    const slot = msSlot.getBoundingClientRect();
+    const slotY = slot.top - base.top;
+    const maxScroll = Math.max(1, msScroll.scrollHeight - msScroll.clientHeight);
+    const slotDocY = msScroll.scrollTop + slotY;
+    // 让缩小的照片正好停在屏幕正中时的滚动位置，动画结束后再往下才是第二张图
+    const landing = slotDocY + slot.height / 2 - vh / 2;
+    const S = Math.max(1, Math.min(vh * MS_SHRINK, maxScroll, landing));
+    msEnd = S;
+    const raw = Math.min(1, Math.max(0, msScroll.scrollTop / S));
+    const p = raw * raw * (3 - 2 * raw);                   // 缓起缓收，鼠标慢慢滚就慢慢缩
+    const narrow = vw < 720;                              // 窄屏不显示两侧大字，照片直接满屏缩小
+
+    // 标题：首屏不显示，照片缩小到两侧腾出空位后浮现，并一直贴在照片左右
+    const smallFont = parseFloat(getComputedStyle(msTitle).fontSize) || 40;
+    const innerGap = parseFloat(getComputedStyle(msTitle).columnGap) || 22;
+    const font0 = Math.max(Math.min(vw * .052, vh * .09), smallFont + 6);
+    const f = font0 + (smallFont - font0) * p;
+    const hgap = 18 + (innerGap - 18) * p;
+    // 用卡片标题的字宽按字号等比推算当前两词宽度
+    const cardLw = msTitleL.getBoundingClientRect().width;
+    const cardRw = msTitleR.getBoundingClientRect().width;
+    const lw = cardLw * f / smallFont;
+    const rw = cardRw * f / smallFont;
+
+    // 首屏整张封面铺满；随滚动缩小，落到卡片标题的相纸位
+    const fw = vw + (slot.width - vw) * p;
+    const fh = vh + (slot.height - vh) * p;
+    // 缩小过程中照片钉在屏幕正中；落位后才跟着卡片一起往上走
+    const restY = (vh - fh) / 2;
+    const clamped = landing > maxScroll + .5;               // 内容不够高时（窄屏），末尾补一段对齐
+    const q = clamped ? Math.min(1, Math.max(0, (raw - .9) / .1)) : (raw >= .999 ? 1 : 0);
+    const fy = restY + (slotY - restY) * q;
+    const fx = (vw - fw) / 2;                              // 照片始终在中轴上
+    // 照片两侧是否已腾出放字的空间（以较宽的 About 为准），决定文字浮现程度
+    const freeLeft = fx - hgap - lw;
+    const k = Math.max(0, Math.min(1, freeLeft / (vw * .07)));
+
+    msFloat.style.left   = fx + 'px';
+    msFloat.style.top    = fy + 'px';
+    msFloat.style.width  = fw + 'px';
+    msFloat.style.height = fh + 'px';
+    msFloat.style.setProperty('--p', p.toFixed(4));
+    msCue.style.opacity = String(Math.max(0, 1 - raw * 4));
+
+    msHeroTitle.style.display = narrow ? 'none' : '';
+    msHeroTitle.style.left = fx + 'px';
+    msHeroTitle.style.top = (fy + fh / 2) + 'px';
+    msHeroTitle.style.width = fw + 'px';
+    msHeroTitle.style.fontSize = f + 'px';
+    msHeroTitle.style.setProperty('--hgap', hgap.toFixed(1) + 'px');
+    msHeroTitle.style.opacity = p > .995 ? '0' : k.toFixed(3);
+    // 缩小过程中只显示首屏标题，落地后再换回卡片标题，避免两份文字重叠
+    msTitle.style.visibility = p > .995 ? '' : 'hidden';
+  }
+
+  function msReset() {
+    msScroll.scrollTop = 0;
+    msUpdate();
+  }
+
+  let msRaf = 0;
+  msScroll.addEventListener('scroll', function () {
+    if (msRaf) return;
+    msRaf = requestAnimationFrame(function () { msRaf = 0; msUpdate(); });
+  }, { passive: true });
+
+  window.addEventListener('resize', function () {
+    if (currentKey === 'myself') msUpdate();
+  });
+  if (msSlot.complete) msUpdate();
+  else msSlot.addEventListener('load', msUpdate);
+
+  /* ---------- Study Proposal：GSAP 开场 + 无限跑马灯 ---------- */
+  let proposalTl = null;
+  let marqueeTweens = [];
+
+  [prTens, prOnes].forEach(function (col) {
+    for (let d = 0; d < 10; d++) {
+      const s = document.createElement('span');
+      s.textContent = d;
+      col.appendChild(s);
+    }
+  });
+
+  function setDigits(v) {
+    prTens.style.transform = 'translateY(' + (-Math.floor(v / 10) * 10) + '%)';
+    prOnes.style.transform = 'translateY(' + (-(v % 10) * 10) + '%)';
+  }
+  setDigits(0);
+
+  function stopProposal() {
+    if (proposalTl) { proposalTl.kill(); proposalTl = null; }
+    marqueeTweens.forEach(function (t) { t.kill(); });
+    marqueeTweens = [];
+    chapter.classList.remove('intro-playing');
+    proposalView.classList.remove('is-locked');
+    prIntro.classList.remove('is-pinned');
+    prIntro.style.removeProperty('--pin-y');
+    prIntro.style.display = 'none';
+    gsap.set(prPage, { clearProps: 'transform' });
+    const wrap = prBlooms[0].parentNode;
+    gsap.set(wrap, { clearProps: 'transform' });
+    wrap.style.width = '';
+  }
+
+  function playProposal() {
+    stopProposal();
+    gsap.set(prTrackA, { xPercent: 0 });
+    if (prTrackB) gsap.set(prTrackB, { xPercent: 0 });
+
+    if (reduce) {                       // 系统开了“减少动效”，直接给成品
+      prIntro.style.display = 'none';
+      gsap.set('.pr-reveal', { clearProps: 'all' });
+      return;
+    }
+
+    prIntro.style.display = 'flex';
+    proposalView.classList.add('is-locked');
+    chapter.classList.add('intro-playing');
+    // 重进时清掉上一轮留下的内联样式，保证开场从黑底重新开始
+    gsap.set(prBlooms, { clearProps: 'all' });
+    gsap.set(['.pr-count', '.pr-intro-meta'], { clearProps: 'opacity,visibility' });
+    gsap.set(prIntro, { backgroundColor: 'rgba(19,18,17,1)' });
+    const counterVal = { v: 0 };
+    setDigits(0);
+
+    // 终点：流动文字的正中（相对滚动内容定位，照片会跟着跑马灯一起滚走）
+    const prWrap = prBlooms[0].parentNode;
+    const narrow = window.innerWidth <= 860;
+    const floatW = Math.min(window.innerWidth * (narrow ? .62 : .30), narrow ? 300 : 480);
+    proposalView.scrollTop = 0;
+    const pRect = proposalView.getBoundingClientRect();
+    const mRect = document.querySelector('.pr-marquee').getBoundingClientRect();
+    const pinX = mRect.left + mRect.width / 2 - pRect.left;
+    const pinY = mRect.top + mRect.height / 2 - pRect.top;
+    const wr = prWrap.getBoundingClientRect();
+    const floatDx = pinX - (wr.left - pRect.left + wr.width / 2);
+    const floatDy = pinY - (wr.top - pRect.top + wr.height / 2);
+    const floatScale = floatW / wr.width;
+
+    // 量完再把页面压到下方，开始“升起”动画
+    gsap.set(prPage, { y: '100vh' });
+
+    // 自定义缓动：开花用五次幂收尾
+    const easeBloom = function (p) { return 1 - Math.pow(1 - p, 5); };
+
+    proposalTl = gsap.timeline({
+      onComplete: function () {
+        // 开场结束后照片钉在跑马灯正中间，随页面内容一起滚动
+        prWrap.style.width = floatW + 'px';
+        prIntro.style.setProperty('--pin-y', pinY + 'px');
+        gsap.set(prWrap, { clearProps: 'transform' });
+        prIntro.classList.add('is-pinned');
+        proposalView.classList.remove('is-locked');
+        chapter.classList.remove('intro-playing');
+      }
+    });
+
+    // 1. 十张风景图依次从中心点向外“开花”，一张叠一张
+    prBlooms.forEach(function (img, i) {
+      proposalTl.fromTo(img,
+        { clipPath: 'circle(0% at 50% 50%)', scale: 1.16 },
+        { clipPath: 'circle(150% at 50% 50%)', scale: 1, duration: .5, ease: easeBloom },
+        i * .2);
+    });
+
+    proposalTl
+      // 2. 两位数计数器 00 → 99（数字列垂直位移），与十张开花同步
+      .to(counterVal, {
+        v: 99, duration: 2.2, ease: 'power2.inOut', snap: { v: 1 },
+        onUpdate: function () { setDigits(counterVal.v); }
+      }, 0.05)
+      // 3. 深色底淡出，页面从下方升起，跑马灯文字从照片背后穿过
+      .to(prIntro, { backgroundColor: 'rgba(19,18,17,0)', duration: .55, ease: 'none' }, 2.3)
+      .to(['.pr-count', '.pr-intro-meta'], { autoAlpha: 0, duration: .3, ease: 'none' }, 2.3)
+      .to(prPage, { y: '0vh', duration: 1.5, ease: 'power3.out' }, 2.3)
+      // 4. 页面元素依次从底部淡入升起
+      .fromTo('.pr-reveal',
+        { y: 46, autoAlpha: 0 },
+        { y: 0, autoAlpha: 1, duration: .5, stagger: .035, ease: 'power3.out' }, 2.6)
+      // 5. 只留最后一张照片，以自身中心收小并平移，正好停在刊头带正中
+      .set(Array.prototype.slice.call(prBlooms, 0, -1), { autoAlpha: 0 }, 3.45)
+      .set(prBlooms[prBlooms.length - 1], { boxShadow: '0 26px 60px rgba(0,0,0,.28)' }, 3.45)
+      .to(prWrap, {
+        x: floatDx, y: floatDy, scale: floatScale,
+        duration: .9, ease: 'power2.inOut', transformOrigin: '50% 50%'
+      }, 3.5);
+
+    // 无限跑马灯：内容复制两份，位移 -50% 无缝循环
+    marqueeTweens.push(
+      gsap.to(prTrackA, { xPercent: -50, duration: 26, ease: 'none', repeat: -1 })
+    );
+    if (prTrackB) {
+      marqueeTweens.push(
+        gsap.fromTo(prTrackB, { xPercent: -50 }, { xPercent: 0, duration: 28, ease: 'none', repeat: -1 })
+      );
+    }
+  }
+
+  // 开场层点击可跳过
+  prIntro.addEventListener('click', function () {
+    if (!proposalTl) return;
+    proposalTl.progress(1);
+  });
+
+  function closeChapter() {
+    stopProposal();
+    chapter.classList.remove('proposal-mode');
+    chapter.classList.remove('baracuta-mode');
+    chapter.classList.remove('open');
+    chapter.setAttribute('aria-hidden', 'true');
+    chapterBg.classList.remove('show');
+    if (fan) { fan.destroy(); fan = null; }
+    stage.innerHTML = '';
+    stage.classList.remove('fan-stage');
+    fanHint.hidden = true;
+    currentKey = null;
+  }
+
+  // 用 hash 做路由：可深链、浏览器后退键可直接返回
+  function syncFromHash() {
+    const key = (location.hash || '').replace(/^#\/?/, '');
+    if (CHAPTERS[key]) openChapter(key);
+    else closeChapter();
+  }
+  window.addEventListener('hashchange', syncFromHash);
+  syncFromHash();
+
+  // 深链直接进章节时跳过门页，让下面的房间正常兜住 back
+  if (currentKey) {
+    gate.style.display = 'none';
+    white.style.display = 'none';
+    room.classList.add('show');
+    room.setAttribute('aria-hidden', 'false');
+  }
+
+  document.querySelectorAll('.bubble').forEach(function (b) {
+    b.addEventListener('click', function () {
+      location.hash = '#/' + b.dataset.key;
+    });
+  });
+
+  backBtn.addEventListener('click', function () {
+    // 回退到房间；浏览器自带的返回键同样有效（hash 路由）
+    location.hash = '#/';
+  });
+
+  prevBtn.addEventListener('click', function () { go(-1); });
+  nextBtn.addEventListener('click', function () { go(1); });
+
+  document.addEventListener('keydown', function (e) {
+    if (!currentKey) return;
+    if (e.key === 'Escape') { e.preventDefault(); location.hash = '#/'; }
+    else if (e.key === 'ArrowRight') go(1);
+    else if (e.key === 'ArrowLeft') go(-1);
+    else if (currentKey === 'myself' &&
+             (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ')) {
+      if (msScroll.scrollTop < (msEnd || window.innerHeight * MS_SHRINK)) {
+        e.preventDefault();
+        msScroll.scrollBy({ top: window.innerHeight * 0.45, behavior: 'smooth' });
+      }
+    }
+    else if (currentKey === 'myself' && e.key === 'ArrowUp') {
+      e.preventDefault();
+      msScroll.scrollBy({ top: -window.innerHeight * 0.3, behavior: 'smooth' });
+    }
+  });
+
+  // 点“向下滑”滚动到首图完全缩进标题的位置
+  msCue.addEventListener('click', function () {
+    msScroll.scrollTo({ top: msEnd || window.innerHeight * MS_SHRINK, behavior: 'smooth' });
+  });
+
+  // 触屏左右滑动翻页
+  let swipeX = 0, swipeY = 0, swiping = false;
+  stage.addEventListener('pointerdown', function (e) {
+    swipeX = e.clientX; swipeY = e.clientY; swiping = true;
+  });
+  stage.addEventListener('pointerup', function (e) {
+    if (!swiping) return;
+    swiping = false;
+    if (fan) return;            // 扇形滑块自己处理拖动，避免二次翻页
+    const dx = e.clientX - swipeX;
+    const dy = e.clientY - swipeY;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) go(dx < 0 ? 1 : -1);
+  });
+
+  // 网速不稳时图片偶发失败：自动重试两次（追加时间戳绕过失败缓存）
+  document.addEventListener('error', function (e) {
+    const img = e.target;
+    if (!img || img.tagName !== 'IMG') return;
+    const n = Number(img.dataset.retry || 0);
+    if (n >= 2) return;
+    const src = img.dataset.src || img.getAttribute('src');
+    if (!src) return;
+    img.dataset.retry = String(n + 1);
+    setTimeout(function () {
+      img.classList.remove('loaded');
+      img.src = src + (src.indexOf('?') > -1 ? '&' : '?') + 'r=' + (n + 1);
+    }, 900 * (n + 1));
+  }, true);
+
+  // 预加载房间图，转场不空窗
+  const pre = new Image();
+  pre.src = 'assets/room.webp';
+})();
+</script>
+</body>
+</html>
