@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -309,21 +309,24 @@
     padding:clamp(16px,4vh,34px) clamp(18px,4vw,52px);
   }
   .back{
-    padding:8px 2px;
+    padding:9px 4px;
     border:0;
     background:none;
     cursor:pointer;
-    font:inherit;
-    font-size:clamp(10px,1.35vmin,13px);
-    letter-spacing:.34em;
-    color:rgba(92,85,70,.6);
+    font-family:'Inter',Georgia,serif;
+    font-size:clamp(14px,1.9vmin,17px);
+    font-weight:600;
+    letter-spacing:.24em;
+    color:rgba(64,56,42,.92);
+    text-shadow:0 0 16px rgba(253,250,244,1),0 0 6px rgba(253,250,244,.9);
     transition:color .3s ease, transform .3s ease;
   }
-  .back:hover{color:#6d6553;transform:translateX(-3px)}
+  .back:hover{color:#3c3527;transform:translateX(-3px)}
   .chapter-index{
-    font-size:clamp(10px,1.35vmin,13px);
-    letter-spacing:.34em;
-    color:rgba(92,85,70,.38);
+    font-family:'Inter',Georgia,serif;
+    font-size:clamp(11px,1.5vmin,14px);
+    letter-spacing:.3em;
+    color:rgba(92,85,70,.5);
   }
 
   .chapter-head{
@@ -991,7 +994,7 @@
     <div class="backdrop"><img src="assets/door.webp" alt=""></div>
     <div class="frame">
       <div class="zoom idle" id="gateZoom">
-        <img class="art" src="assets/door.webp" alt="一扇挂着拉环的门，门牌上写着 Welcome to my world">
+        <img class="art" src="assets/door.webp" alt="A door with a pull ring, the plaque reads Welcome to my world">
       </div>
 
       <div class="video-wrap" id="videoWrap">
@@ -999,7 +1002,7 @@
         <div class="wm-patch"></div>
       </div>
 
-      <button class="pull" id="pull" aria-label="拉下拉环，进入 Xinyang 的世界">
+      <button class="pull" id="pull" aria-label="Pull the ring to enter Xinyang's world">
         <span class="glow"></span>
         <span class="ring-cue"></span>
       </button>
@@ -1014,67 +1017,67 @@
     <div class="frame">
       <div class="zoom">
         <div class="parallax">
-          <img class="art" src="assets/room.webp" alt="Xinyang 的世界：淡绿色碎花房间，四个气泡里分别装着 JORYA、BARACUTA 与 Study Proposal">
+          <img class="art" src="assets/room.webp" alt="Xinyang's world: a pale green floral room with four bubbles holding JORYA, BARACUTA and Study Proposal">
           <div class="sweep"></div>
 
           <button class="bubble" data-key="myself"
                   style="left:16.1%;top:65.5%;width:14.6%;height:16.2%"
-                  aria-label="打开 Myself 章节"></button>
+                  aria-label="Open Myself chapter"></button>
           <button class="bubble" data-key="jorya"
                   style="left:70.5%;top:23.1%;width:18.8%;height:33.4%"
-                  aria-label="打开 JORYA 章节"></button>
+                  aria-label="Open JORYA chapter"></button>
           <button class="bubble" data-key="baracuta"
                   style="left:85.4%;top:40.1%;width:19.2%;height:34.2%"
-                  aria-label="打开 BARACUTA 章节"></button>
+                  aria-label="Open BARACUTA chapter"></button>
           <button class="bubble" data-key="proposal"
                   style="left:73.7%;top:63.4%;width:19.2%;height:34.2%"
-                  aria-label="打开 Study Proposal 章节"></button>
+                  aria-label="Open Study Proposal chapter"></button>
         </div>
       </div>
     </div>
   </section>
 
   <!-- 章节页：一屏一图，左右翻页 -->
-  <section class="chapter" id="chapter" aria-hidden="true" aria-label="作品章节">
+  <section class="chapter" id="chapter" aria-hidden="true" aria-label="Chapters">
     <div class="chapter-bg" id="chapterBg" aria-hidden="true"><img id="chapterBgImg" alt=""></div>
 
     <div class="chapter-bar">
-      <button class="back" id="chapterBack" aria-label="返回房间">←&nbsp;&nbsp;back</button>
+      <button class="back" id="chapterBack" aria-label="Back to the room">←&nbsp;&nbsp;back</button>
       <span class="chapter-index" id="chapterIndex"></span>
     </div>
 
     <h1 class="chapter-head" id="chapterHead" hidden></h1>
 
     <div class="chapter-body">
-      <button class="nav" id="prevSlide" aria-label="上一张" hidden>‹</button>
+      <button class="nav" id="prevSlide" aria-label="Previous" hidden>‹</button>
       <div class="stage" id="stage"></div>
-      <button class="nav" id="nextSlide" aria-label="下一张" hidden>›</button>
+      <button class="nav" id="nextSlide" aria-label="Next" hidden>›</button>
     </div>
 
     <div class="chapter-foot">
       <div class="contact" id="contact" hidden>
-        <p class="contact-line">Contact Me：<a id="contactMail" href="mailto:lov_1017@qq.com">lov_1017@qq.com</a></p>
+        <p class="contact-line">Contact Me:<a id="contactMail" href="mailto:lov_1017@qq.com">lov_1017@qq.com</a></p>
         <p class="contact-sub" id="contactNote">I look forward to connecting with you.</p>
       </div>
       <span class="counter" id="counter"></span>
-      <span class="fan-hint" id="fanHint" hidden>拖动 / 滚轮</span>
+      <span class="fan-hint" id="fanHint" hidden>drag / scroll</span>
     </div>
 
     <!-- Myself：首图随滚动缩小进标题，之后继续下滑看介绍 -->
     <div class="myself" id="myselfView" aria-label="Myself">
       <div class="ms-float" id="msFloat" style="--p:0">
-        <img src="assets/myself-cover.webp" alt="Myself 封面" draggable="false">
+        <img src="assets/myself-cover.webp" alt="Myself cover" draggable="false">
       </div>
       <div class="ms-hero-title" id="msHeroTitle" aria-hidden="true"><span class="ms-hw ms-hw-l">About</span><span class="ms-hw ms-hw-r"><em>Me</em></span></div>
-      <button class="ms-cue" id="msCue" type="button" aria-label="向下滑动">向下滑<i></i></button>
+      <button class="ms-cue" id="msCue" type="button" aria-label="Scroll down">scroll down<i></i></button>
       <div class="ms-scroll" id="msScroll">
         <div class="ms-lead"></div>
         <div class="ms-inner">
-          <h2 class="ms-title"><span>About</span><img class="ms-photo-slot" id="msSlot" src="assets/myself-cover.webp" alt="Myself 照片"><em>Me</em></h2>
+          <h2 class="ms-title"><span>About</span><img class="ms-photo-slot" id="msSlot" src="assets/myself-cover.webp" alt="Myself photo"><em>Me</em></h2>
           <p class="ms-sub">different versions of me</p>
-          <img class="ms-collage" src="assets/myself-01.webp" alt="Myself 介绍">
+          <img class="ms-collage" src="assets/myself-01.webp" alt="Myself introduction">
           <div class="ms-contact">
-            <p class="contact-line">Contact Me：<a href="mailto:lov_1017@qq.com">lov_1017@qq.com</a></p>
+            <p class="contact-line">Contact Me:<a href="mailto:lov_1017@qq.com">lov_1017@qq.com</a></p>
             <p class="contact-sub">I look forward to connecting with you.</p>
           </div>
         </div>
@@ -1099,7 +1102,7 @@
         <ol class="pr-plates">
           <li class="pr-plate pr-reveal">
             <span class="pr-no">01</span>
-            <img src="assets/proposal-hero.webp" alt="晨雾中的湖面与远山">
+            <img src="assets/proposal-hero.webp" alt="Lakes and distant mountains in morning mist">
             <div class="pr-plate-body">
               <h3>Still Water <em>Lake · Dawn</em></h3>
               <p>Fog resting on the surface before the light arrives; the water reads like paper.</p>
@@ -1107,7 +1110,7 @@
           </li>
           <li class="pr-plate pr-reveal">
             <span class="pr-no">02</span>
-            <img src="assets/proposal-02.webp" alt="晨雾中的松林">
+            <img src="assets/proposal-02.webp" alt="Pine forest in morning mist">
             <div class="pr-plate-body">
               <h3>Pines <em>Forest · Fog</em></h3>
               <p>A stand of firs holding mist between the trunks — texture without detail.</p>
@@ -1115,7 +1118,7 @@
           </li>
           <li class="pr-plate pr-reveal">
             <span class="pr-no">03</span>
-            <img src="assets/proposal-03.webp" alt="暮色中的沙丘">
+            <img src="assets/proposal-03.webp" alt="Sand dunes at dusk">
             <div class="pr-plate-body">
               <h3>Dune <em>Desert · Dusk</em></h3>
               <p>Wind draws one long curve; almost no shadow, almost no sense of scale.</p>
@@ -1123,7 +1126,7 @@
           </li>
           <li class="pr-plate pr-reveal">
             <span class="pr-no">04</span>
-            <img src="assets/proposal-04.webp" alt="蓝调时刻的海岸线">
+            <img src="assets/proposal-04.webp" alt="Coastline at blue hour">
             <div class="pr-plate-body">
               <h3>Coastline <em>Atlantic · Blue hour</em></h3>
               <p>A long exposure flattens the sea into a single soft band of blue.</p>
@@ -1131,7 +1134,7 @@
           </li>
           <li class="pr-plate pr-reveal">
             <span class="pr-no">05</span>
-            <img src="assets/proposal-05.webp" alt="晨雾中的层叠群山">
+            <img src="assets/proposal-05.webp" alt="Layered mountains in morning mist">
             <div class="pr-plate-body">
               <h3>Ridges <em>Prealps · Sunrise</em></h3>
               <p>Layer after layer of hills, each one paler than the one in front of it.</p>
@@ -1139,7 +1142,7 @@
           </li>
           <li class="pr-plate pr-reveal">
             <span class="pr-no">06</span>
-            <img src="assets/proposal-06.webp" alt="雪原上的孤树">
+            <img src="assets/proposal-06.webp" alt="A lone tree on a snowfield">
             <div class="pr-plate-body">
               <h3>Field <em>Snow · Winter</em></h3>
               <p>One bare tree in an empty field: the quietest composition winter offers.</p>
@@ -1147,7 +1150,7 @@
           </li>
           <li class="pr-plate pr-reveal">
             <span class="pr-no">07</span>
-            <img src="assets/proposal-07.webp" alt="正午的海平线">
+            <img src="assets/proposal-07.webp" alt="Sea horizon at noon">
             <div class="pr-plate-body">
               <h3>Open Sea <em>North Sea · Noon</em></h3>
               <p>Water and sky meet in the same colour; the horizon almost disappears.</p>
@@ -1155,7 +1158,7 @@
           </li>
           <li class="pr-plate pr-reveal">
             <span class="pr-no">08</span>
-            <img src="assets/proposal-08.webp" alt="雾中的白桦林">
+            <img src="assets/proposal-08.webp" alt="Birch forest in fog">
             <div class="pr-plate-body">
               <h3>Birch <em>Forest · Haze</em></h3>
               <p>White trunks dissolving into white air — closer to drawing than photography.</p>
@@ -1163,7 +1166,7 @@
           </li>
           <li class="pr-plate pr-reveal">
             <span class="pr-no">09</span>
-            <img src="assets/proposal-09.webp" alt="航拍浅滩与浪线">
+            <img src="assets/proposal-09.webp" alt="Aerial shallows and surf lines">
             <div class="pr-plate-body">
               <h3>Shoreline <em>Aerial · Midday</em></h3>
               <p>Foam traces a thin line where pale sand meets pale water.</p>
@@ -1171,7 +1174,7 @@
           </li>
           <li class="pr-plate pr-reveal">
             <span class="pr-no">10</span>
-            <img src="assets/proposal-10.webp" alt="暮色中的层叠山脊">
+            <img src="assets/proposal-10.webp" alt="Layered ridges at dusk">
             <div class="pr-plate-body">
               <h3>Dusk <em>Mountains · Evening</em></h3>
               <p>Ridges fold into violet as the light leaves the valley.</p>
@@ -1209,34 +1212,34 @@
     <!-- BARACUTA：顶部透明拼贴 + 论文逐页 -->
     <div class="baracuta" id="baracutaView" aria-label="BARACUTA">
       <div class="bc-page">
-        <img class="bc-collage" src="assets/baracuta-cut.webp" alt="BARACUTA 拼贴视觉">
+        <img class="bc-collage" src="assets/baracuta-cut.webp" alt="BARACUTA collage artwork">
 
         <div class="bc-doc">
           <div class="bc-doc-head"><span>BARACUTA — Marketing Strategy</span><span>24 pages · 2026</span></div>
-          <img src="assets/baracuta/doc-01.webp" alt="论文第 1 页">
-          <img src="assets/baracuta/doc-02.webp" alt="论文第 2 页" loading="lazy">
-          <img src="assets/baracuta/doc-03.webp" alt="论文第 3 页" loading="lazy">
-          <img src="assets/baracuta/doc-04.webp" alt="论文第 4 页" loading="lazy">
-          <img src="assets/baracuta/doc-05.webp" alt="论文第 5 页" loading="lazy">
-          <img src="assets/baracuta/doc-06.webp" alt="论文第 6 页" loading="lazy">
-          <img src="assets/baracuta/doc-07.webp" alt="论文第 7 页" loading="lazy">
-          <img src="assets/baracuta/doc-08.webp" alt="论文第 8 页" loading="lazy">
-          <img src="assets/baracuta/doc-09.webp" alt="论文第 9 页" loading="lazy">
-          <img src="assets/baracuta/doc-10.webp" alt="论文第 10 页" loading="lazy">
-          <img src="assets/baracuta/doc-11.webp" alt="论文第 11 页" loading="lazy">
-          <img src="assets/baracuta/doc-12.webp" alt="论文第 12 页" loading="lazy">
-          <img src="assets/baracuta/doc-13.webp" alt="论文第 13 页" loading="lazy">
-          <img src="assets/baracuta/doc-14.webp" alt="论文第 14 页" loading="lazy">
-          <img src="assets/baracuta/doc-15.webp" alt="论文第 15 页" loading="lazy">
-          <img src="assets/baracuta/doc-16.webp" alt="论文第 16 页" loading="lazy">
-          <img src="assets/baracuta/doc-17.webp" alt="论文第 17 页" loading="lazy">
-          <img src="assets/baracuta/doc-18.webp" alt="论文第 18 页" loading="lazy">
-          <img src="assets/baracuta/doc-19.webp" alt="论文第 19 页" loading="lazy">
-          <img src="assets/baracuta/doc-20.webp" alt="论文第 20 页" loading="lazy">
-          <img src="assets/baracuta/doc-21.webp" alt="论文第 21 页" loading="lazy">
-          <img src="assets/baracuta/doc-22.webp" alt="论文第 22 页" loading="lazy">
-          <img src="assets/baracuta/doc-23.webp" alt="论文第 23 页" loading="lazy">
-          <img src="assets/baracuta/doc-24.webp" alt="论文第 24 页" loading="lazy">
+          <img src="assets/baracuta/doc-01.webp" alt="Manuscript page 1">
+          <img src="assets/baracuta/doc-02.webp" alt="Manuscript page 2" loading="lazy">
+          <img src="assets/baracuta/doc-03.webp" alt="Manuscript page 3" loading="lazy">
+          <img src="assets/baracuta/doc-04.webp" alt="Manuscript page 4" loading="lazy">
+          <img src="assets/baracuta/doc-05.webp" alt="Manuscript page 5" loading="lazy">
+          <img src="assets/baracuta/doc-06.webp" alt="Manuscript page 6" loading="lazy">
+          <img src="assets/baracuta/doc-07.webp" alt="Manuscript page 7" loading="lazy">
+          <img src="assets/baracuta/doc-08.webp" alt="Manuscript page 8" loading="lazy">
+          <img src="assets/baracuta/doc-09.webp" alt="Manuscript page 9" loading="lazy">
+          <img src="assets/baracuta/doc-10.webp" alt="Manuscript page 10" loading="lazy">
+          <img src="assets/baracuta/doc-11.webp" alt="Manuscript page 11" loading="lazy">
+          <img src="assets/baracuta/doc-12.webp" alt="Manuscript page 12" loading="lazy">
+          <img src="assets/baracuta/doc-13.webp" alt="Manuscript page 13" loading="lazy">
+          <img src="assets/baracuta/doc-14.webp" alt="Manuscript page 14" loading="lazy">
+          <img src="assets/baracuta/doc-15.webp" alt="Manuscript page 15" loading="lazy">
+          <img src="assets/baracuta/doc-16.webp" alt="Manuscript page 16" loading="lazy">
+          <img src="assets/baracuta/doc-17.webp" alt="Manuscript page 17" loading="lazy">
+          <img src="assets/baracuta/doc-18.webp" alt="Manuscript page 18" loading="lazy">
+          <img src="assets/baracuta/doc-19.webp" alt="Manuscript page 19" loading="lazy">
+          <img src="assets/baracuta/doc-20.webp" alt="Manuscript page 20" loading="lazy">
+          <img src="assets/baracuta/doc-21.webp" alt="Manuscript page 21" loading="lazy">
+          <img src="assets/baracuta/doc-22.webp" alt="Manuscript page 22" loading="lazy">
+          <img src="assets/baracuta/doc-23.webp" alt="Manuscript page 23" loading="lazy">
+          <img src="assets/baracuta/doc-24.webp" alt="Manuscript page 24" loading="lazy">
         </div>
       </div>
     </div>
@@ -1502,7 +1505,7 @@
       el.className = 'card';
       const img = document.createElement('img');
       img.dataset.src = src;                        // 先不请求，翻到附近再加载
-      img.alt = 'JORYA 作品 ' + (i + 1);
+      img.alt = 'JORYA look ' + (i + 1);
       img.decoding = 'async';
       img.draggable = false;
       if (fit === 'contain') img.className = 'contain';
@@ -1726,7 +1729,7 @@
         const wrap = document.createElement('div');
         wrap.innerHTML =
           '<div class="slide-title">' + ch.title + '</div>' +
-          '<div class="slide-note">内容待补充</div>';
+          '<div class="slide-note">Content coming soon</div>';
         stage.appendChild(wrap);
       }
       counter.textContent = '';
@@ -1735,7 +1738,7 @@
       const item = list[slide];
       const img = document.createElement('img');
       img.src = typeof item === 'string' ? item : item.src;
-      img.alt = ch.title + ' 作品 ' + (slide + 1);
+      img.alt = ch.title + ' — slide ' + (slide + 1);
       stage.appendChild(img);
       counter.textContent =
         String(slide + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
