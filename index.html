@@ -213,6 +213,42 @@
     will-change:transform;
   }
 
+  /* ---------- 漂浮层：小女孩和三个玻璃气泡轻轻上下浮动 ---------- */
+  /* 每层都是同一张房间图的“窗口”，窗口内像素与底图完全对齐，只靠遮罩羽化边缘 */
+  .room-drift{
+    position:absolute;
+    background-image:url('assets/room.webp');
+    background-repeat:no-repeat;
+    pointer-events:none;
+    z-index:1;
+    will-change:transform;
+    animation:roomDriftBub 8s ease-in-out infinite alternate;
+  }
+  .room-drift.bub{
+    -webkit-mask-image:radial-gradient(closest-side, #000 88%, rgba(0,0,0,0) 100%);
+    mask-image:radial-gradient(closest-side, #000 88%, rgba(0,0,0,0) 100%);
+  }
+  .room-drift.girl{
+    animation-name:roomDriftGirl;
+    animation-duration:11s;
+    -webkit-mask-image:
+      linear-gradient(to right, rgba(0,0,0,0), #000 10%, #000 90%, rgba(0,0,0,0)),
+      linear-gradient(to bottom, rgba(0,0,0,0), #000 5%, #000 96%, rgba(0,0,0,0));
+    -webkit-mask-composite:source-in;
+    mask-image:
+      linear-gradient(to right, rgba(0,0,0,0), #000 10%, #000 90%, rgba(0,0,0,0)),
+      linear-gradient(to bottom, rgba(0,0,0,0), #000 5%, #000 96%, rgba(0,0,0,0));
+    mask-composite:intersect;
+  }
+  .b-jorya{animation-duration:8.6s;animation-delay:-1.4s}
+  .b-baracuta{animation-duration:7.6s;animation-delay:-3.1s}
+  .b-proposal{animation-duration:9.4s;animation-delay:-.6s}
+  @keyframes roomDriftBub{from{transform:translateY(-9px) rotate(-.7deg)}to{transform:translateY(9px) rotate(.7deg)}}
+  @keyframes roomDriftGirl{from{transform:translateY(-7px)}to{transform:translateY(1px)}}
+  @media (prefers-reduced-motion: reduce){
+    .room-drift{animation:none}
+  }
+
   /* ---------- 房间里的四个气泡热区 ---------- */
   .bubble{
     position:absolute;
@@ -919,6 +955,7 @@
     mix-blend-mode:soft-light;
     opacity:0;
     pointer-events:none;
+    z-index:3;
   }
   #room.show .sweep{
     opacity:1;
@@ -1018,6 +1055,10 @@
       <div class="zoom">
         <div class="parallax">
           <img class="art" src="assets/room.webp" alt="Xinyang's world: a pale green floral room with four bubbles holding JORYA, BARACUTA and Study Proposal">
+          <div class="room-drift girl" aria-hidden="true" style="left:36.5%;top:33%;width:31%;height:67%;background-size:322.6% 149.25%;background-position:52.9% 100%"></div>
+          <div class="room-drift bub b-jorya" aria-hidden="true" style="left:60.7%;top:5.69%;width:19.6%;height:34.83%;background-size:510.2% 287.1%;background-position:75.5% 8.73%"></div>
+          <div class="room-drift bub b-baracuta" aria-hidden="true" style="left:75.17%;top:22.29%;width:20.27%;height:36.02%;background-size:493.3% 277.6%;background-position:94.27% 34.84%"></div>
+          <div class="room-drift bub b-proposal" aria-hidden="true" style="left:63.27%;top:45.22%;width:20.47%;height:36.37%;background-size:488.5% 274.9%;background-position:79.55% 71.06%"></div>
           <div class="sweep"></div>
 
           <button class="bubble" data-key="myself"
